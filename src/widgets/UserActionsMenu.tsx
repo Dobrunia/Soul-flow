@@ -19,7 +19,7 @@ export default function UserActionsMenu({ onClose }: UserActionsMenuProps) {
         return;
       }
 
-      window.location.href = '/';
+      window.location.href = '/login';
     } catch (error) {
       console.error('Logout failed:', error);
     }
