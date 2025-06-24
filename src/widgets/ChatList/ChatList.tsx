@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatList } from 'dobruniaui';
+import { createBrowserClient } from '@/shared/lib/supabase';
 
 interface ChatItem {
   id: string;
@@ -13,97 +15,157 @@ interface ChatItem {
   unreadCount?: number;
 }
 
-const mockChats: ChatItem[] = [
-  {
-    id: '1',
-    name: 'Добрыня',
-    lastMessage: '',
-    time: '',
-    avatar: undefined,
-    isOnline: true,
-    unreadCount: 0,
-  },
-  {
-    id: '2',
-    name: 'Алиса Морозова',
-    lastMessage: 'Отлично! Встречаемся завтра',
-    time: '12:45',
-    avatar: undefined,
-    isOnline: false,
-    unreadCount: 2,
-  },
-  {
-    id: '3',
-    name: 'Максим Dev',
-    lastMessage: 'Проверь последний коммит, там...',
-    time: '11:23',
-    avatar: undefined,
-    isOnline: false,
-    unreadCount: 0,
-  },
-  {
-    id: '4',
-    name: 'Артём Кузнецов',
-    lastMessage: 'Кофе не забудь! ☕',
-    time: '10:07',
-    avatar: undefined,
-    isOnline: false,
-    unreadCount: 1,
-  },
-  {
-    id: '5',
-    name: 'Мария Белкина',
-    lastMessage: 'Документы отправила на почту, ...',
-    time: '09:41',
-    avatar: undefined,
-    isOnline: false,
-    unreadCount: 0,
-  },
-  {
-    id: '6',
-    name: 'Денис Волков',
-    lastMessage: 'Спасибо за помощь ! 🙏',
-    time: '08:15',
-    avatar: undefined,
-    isOnline: false,
-    unreadCount: 1,
-  },
-  {
-    id: '7',
-    name: 'Софья Лебедева',
-    lastMessage: 'Презентацию нужно на дораб...',
-    time: '07:52',
-    avatar: undefined,
-    isOnline: false,
-    unreadCount: 0,
-  },
-  {
-    id: '8',
-    name: 'Frontend Team',
-    lastMessage: 'Релиз откладывался но начать...',
-    time: 'Вчера',
-    avatar: undefined,
-    isOnline: false,
-    unreadCount: 0,
-  },
-];
+// Типы для Supabase
+interface Chat {
+  id: string;
+  name: string;
+  type: 'direct' | 'group';
+  created_at: string;
+  updated_at: string;
+}
+
+interface ChatParticipantWithChat {
+  chat_id: string;
+  chats: Chat;
+}
+
+interface Message {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+}
 
 export default function ChatListComponent() {
   const params = useParams();
   const router = useRouter();
   const selectedChatId = params?.chatId as string;
 
-  // Имитация загрузки
-  const isLoading = false;
+  const [chats, setChats] = useState<ChatItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadChats = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const supabase = createBrowserClient();
+
+      // Получаем текущего пользователя
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('User not authenticated:', userError);
+        return;
+      }
+
+      // Получаем чаты пользователя через chat_participants
+      const { data: chatParticipants, error: chatsError } = await supabase
+        .from('chat_participants')
+        .select(
+          `
+          chat_id,
+          chats!inner(
+            id,
+            name,
+            type,
+            created_at,
+            updated_at
+          )
+        `
+        )
+        .eq('user_id', user.id)
+        .order('chats.updated_at', { ascending: false });
+
+      if (chatsError) {
+        console.error('Error loading chats:', chatsError);
+        setError('Ошибка загрузки чатов');
+        return;
+      }
+
+      if (!chatParticipants || chatParticipants.length === 0) {
+        setChats([]);
+        return;
+      }
+
+      // Получаем последние сообщения для каждого чата
+      const chatIds = chatParticipants.map((cp: any) => cp.chat_id);
+
+      const lastMessagesPromises = chatIds.map(async (chatId: string) => {
+        const { data: lastMessage } = await supabase
+          .from('messages')
+          .select('content, created_at, sender_id')
+          .eq('chat_id', chatId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        return { chatId, lastMessage };
+      });
+
+      const lastMessagesResults = await Promise.all(lastMessagesPromises);
+      const lastMessagesMap = new Map(
+        lastMessagesResults.map(({ chatId, lastMessage }) => [chatId, lastMessage])
+      );
+
+      // Формируем данные для ChatList
+      const formattedChats: ChatItem[] = chatParticipants.map((cp: any) => {
+        const chat = cp.chats;
+        const lastMessage = lastMessagesMap.get(chat.id);
+
+        return {
+          id: chat.id,
+          name: chat.name,
+          lastMessage: lastMessage?.content || 'Пока нет сообщений',
+          time: lastMessage
+            ? new Date(lastMessage.created_at).toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : '',
+          avatar: undefined, // TODO: Добавить аватары
+          isOnline: false, // TODO: Добавить статус онлайн
+          unreadCount: 0, // TODO: Подсчет непрочитанных
+        };
+      });
+
+      setChats(formattedChats);
+    } catch (error) {
+      console.error('Error in loadChats:', error);
+      setError('Произошла ошибка при загрузке');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadChats();
+  }, []);
 
   const handleChatSelect = (chatId: string) => {
     // Используем Next.js router для бесшовной навигации
     router.push(`/chats/${chatId}`);
   };
 
+  if (error) {
+    return (
+      <div className='p-4 text-center text-[var(--c-warning)]'>
+        <p>{error}</p>
+        <button onClick={loadChats} className='mt-2 text-[var(--c-accent)] hover:underline'>
+          Повторить попытку
+        </button>
+      </div>
+    );
+  }
+
   return (
     <ChatList
-      items={mockChats}
+      items={chats}
       selectedId={selectedChatId}
       onSelect={handleChatSelect}
       loading={isLoading}
