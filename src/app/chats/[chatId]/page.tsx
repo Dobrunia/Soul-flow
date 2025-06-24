@@ -245,24 +245,21 @@ export default function ChatPage() {
   return (
     <div className='flex-1 flex flex-col bg-[var(--c-bg-default)] h-full'>
       {/* Шапка чата */}
-      <div className='pb-1 bg-[var(--c-bg-subtle)] border-b border-[var(--c-border)]'>
-        <Row
-          left={<Avatar name={`Чат ${chatId}`} size='md' status='online' showStatus />}
-          center={
-            <div className='align-left w-full'>
-              <h2 className='font-medium text-[var(--c-text-primary)]'>Чат #{chatId}</h2>
-              <p className='text-sm text-[var(--c-text-secondary)]'>онлайн</p>
-            </div>
-          }
-          align='center'
-        />
-      </div>
+      <Row
+        left={<Avatar name={`Чат ${chatId}`} size='md' status='online' showStatus />}
+        center={
+          <div className='align-left w-full'>
+            <h2 className='font-medium'>Чат #{chatId}</h2>
+            <p className='text-sm text-[var(--c-text-secondary)]'>онлайн</p>
+          </div>
+        }
+        className='bg-[var(--c-bg-subtle)] border-b border-[var(--c-border)]'
+      />
 
       {/* История сообщений */}
       <MessageContainer
         autoScrollToBottom={true}
         lastMessageId={mockMessages[mockMessages.length - 1]?.id}
-        className='flex-1'
       >
         {mockMessages.map((msg) => (
           <Message

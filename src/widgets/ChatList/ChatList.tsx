@@ -108,7 +108,7 @@ export default function ChatListComponent() {
       onSelect={handleChatSelect}
       loading={isLoading}
       skeletonCount={6}
-      className='h-full'
+      className='h-full mt-[1px] border-r border-[var(--c-border)]'
     />
   );
 }
