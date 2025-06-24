@@ -1,12 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { homePage } from './shared/variables/home.page';
 
 // Публичные маршруты (доступны без авторизации)
 const publicRoutes = ['/', '/login', '/register'];
 
 // Защищенные маршруты (требуют авторизации)
-const protectedRoutes = ['/dashboard'];
+const protectedRoutes = [homePage];
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
@@ -37,9 +38,9 @@ export async function middleware(req: NextRequest) {
 
   // Если маршрут публичный - пропускаем
   if (publicRoutes.includes(pathname)) {
-    // Если авторизован и пытается зайти на auth страницы или главную - редирект на dashboard
+    // Если авторизован и пытается зайти на auth страницы или главную - редирект на chats
     if (user && ['/login', '/register', '/'].includes(pathname)) {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+      return NextResponse.redirect(new URL(homePage, req.url));
     }
     return res;
   }

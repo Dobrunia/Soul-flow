@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@/shared/lib/supabase';
 import { Card, TextField, Button, Alert } from 'dobruniaui';
+import { homePage } from '@/shared/variables/home.page';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -100,7 +101,7 @@ export default function RegisterPage() {
 
       // Если создалась сессия - перенаправляем в dashboard
       if (data.session) {
-        window.location.href = '/dashboard';
+        window.location.href = homePage;
         return;
       }
 

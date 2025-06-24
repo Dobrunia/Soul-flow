@@ -1,13 +1,16 @@
 import { Row, Card } from 'dobruniaui';
 import { FaGoogle, FaGithub, FaTwitch } from 'react-icons/fa';
 import { createBrowserClient } from '@/shared/lib/supabase';
+import { homePage } from '@/shared/variables/home.page';
 
 export default function OAuthButtons() {
   const handleOAuthLogin = async (provider: 'google' | 'github' | 'twitch') => {
     const supabase = createBrowserClient();
     await supabase.auth.signInWithOAuth({
       provider,
-      // Middleware автоматически перенаправит на /dashboard после авторизации
+      options: {
+        redirectTo: homePage,
+      },
     });
   };
 

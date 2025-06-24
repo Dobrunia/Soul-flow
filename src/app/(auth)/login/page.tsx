@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@/shared/lib/supabase';
 import { Card, TextField, Button, Alert } from 'dobruniaui';
+import { homePage } from '@/shared/variables/home.page';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -59,7 +60,7 @@ export default function LoginPage() {
       if (error) throw error;
 
       // Принудительная перезагрузка для обновления состояния и активации middleware
-      window.location.href = '/dashboard';
+      window.location.href = homePage;
     } catch (error: any) {
       setError(error.message);
     } finally {

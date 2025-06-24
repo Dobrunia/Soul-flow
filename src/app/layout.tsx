@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ThemeInitializer from '@/shared/ui/ThemeInitializer';
+import Header from '../shared/ui/Header';
 
 export const metadata: Metadata = {
   title: 'Soul Flow',
-  description: 'Приложение с аутентификацией через Supabase',
+  description: 'Мессенджер для общения',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -12,6 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang='ru'>
       <body>
         <ThemeInitializer />
+        <Header />
         {children}
       </body>
     </html>
