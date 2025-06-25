@@ -82,13 +82,19 @@ export default function RegisterPage() {
 
     try {
       const supabase = createBrowserClient();
+      console.log('Attempting registration for:', trimmedEmail);
+
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
         password: trimmedPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/chats`,
+        },
       });
 
       if (error) {
-        setError(error.message);
+        console.error('Supabase registration error:', error);
+        setError(`Ошибка регистрации: ${error.message}`);
         return;
       }
 
@@ -99,8 +105,9 @@ export default function RegisterPage() {
         return;
       }
 
-      // Если создалась сессия - перенаправляем в dashboard
+      // Если создалась сессия - перенаправляем
       if (data.session) {
+        console.log('Registration successful:', data.user);
         window.location.href = homePage;
         return;
       }

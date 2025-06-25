@@ -79,8 +79,7 @@ export default function ChatListComponent() {
           )
         `
         )
-        .eq('user_id', user.id)
-        .order('chats.updated_at', { ascending: false });
+        .eq('user_id', user.id);
 
       if (chatsError) {
         console.error('Error loading chats:', chatsError);
@@ -131,8 +130,16 @@ export default function ChatListComponent() {
           avatar: undefined, // TODO: Добавить аватары
           isOnline: false, // TODO: Добавить статус онлайн
           unreadCount: 0, // TODO: Подсчет непрочитанных
+          // Добавляем поле для сортировки
+          _lastMessageTime: lastMessage?.created_at || chat.updated_at,
         };
       });
+
+      // Сортируем по времени последнего сообщения (самые новые сверху)
+      formattedChats.sort(
+        (a: any, b: any) =>
+          new Date(b._lastMessageTime).getTime() - new Date(a._lastMessageTime).getTime()
+      );
 
       setChats(formattedChats);
     } catch (error) {
