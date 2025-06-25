@@ -70,14 +70,12 @@ export default function ChatPage() {
       } = await supabase.auth.getUser();
       if (userError || !user) {
         notFound();
-        return;
       }
 
       // Проверяем доступ к чату
       const access = await checkChatAccess(chatId, user.id);
       if (!access) {
         notFound();
-        return;
       }
 
       setHasAccess(true);

@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import UserDropdown from '../../widgets/UserDropdown';
+import UserDropdown from '../../widgets/UserDropdown/UserDropdown';
 
 export default async function Header() {
   const headersList = await headers();
