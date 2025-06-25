@@ -2,18 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChatList } from 'dobruniaui';
+import { ChatList, type ChatListItem } from 'dobruniaui';
 import { createBrowserClient } from '@/shared/lib/supabase';
-
-interface ChatItem {
-  id: string;
-  name: string;
-  lastMessage: string;
-  time: string;
-  avatar?: string;
-  isOnline?: boolean;
-  unreadCount?: number;
-}
 
 // Типы для Supabase
 interface Chat {
@@ -24,25 +14,12 @@ interface Chat {
   updated_at: string;
 }
 
-interface ChatParticipantWithChat {
-  chat_id: string;
-  chats: Chat;
-}
-
-interface Message {
-  id: string;
-  chat_id: string;
-  sender_id: string;
-  content: string;
-  created_at: string;
-}
-
 export default function ChatListComponent() {
   const params = useParams();
   const router = useRouter();
   const selectedChatId = params?.chatId as string;
 
-  const [chats, setChats] = useState<ChatItem[]>([]);
+  const [chats, setChats] = useState<ChatListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,13 +69,21 @@ export default function ChatListComponent() {
         return;
       }
 
-      // Получаем последние сообщения для каждого чата
+      // Получаем последние сообщения для каждого чата с информацией об отправителе
       const chatIds = chatParticipants.map((cp: any) => cp.chat_id);
 
       const lastMessagesPromises = chatIds.map(async (chatId: string) => {
         const { data: lastMessage } = await supabase
           .from('messages')
-          .select('content, created_at, sender_id')
+          .select(
+            `
+            content, 
+            created_at, 
+            sender_id,
+            status,
+            profiles!inner(full_name)
+          `
+          )
           .eq('chat_id', chatId)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -113,23 +98,41 @@ export default function ChatListComponent() {
       );
 
       // Формируем данные для ChatList
-      const formattedChats: ChatItem[] = chatParticipants.map((cp: any) => {
+      const formattedChats: ChatListItem[] = chatParticipants.map((cp: any) => {
         const chat = cp.chats;
         const lastMessage = lastMessagesMap.get(chat.id);
 
+        // Форматируем последнее сообщение
+        const isMyMessage = lastMessage?.sender_id === user.id;
+        let displayMessage = 'Пока нет сообщений';
+
+        if (lastMessage) {
+          const senderName =
+            (lastMessage.profiles && lastMessage.profiles[0])?.full_name || 'Неизвестный';
+
+          if (chat.type === 'group' && !isMyMessage) {
+            // В групповых чатах показываем имя отправителя для чужих сообщений
+            displayMessage = `${senderName}: ${lastMessage.content}`;
+          } else {
+            // В остальных случаях просто текст сообщения
+            displayMessage = lastMessage.content;
+          }
+        }
+
         return {
           id: chat.id,
+          avatar: undefined, // TODO: Добавить аватары
           name: chat.name,
-          lastMessage: lastMessage?.content || 'Пока нет сообщений',
+          lastMessage: displayMessage,
           time: lastMessage
             ? new Date(lastMessage.created_at).toLocaleTimeString('ru-RU', {
                 hour: '2-digit',
                 minute: '2-digit',
               })
             : '',
-          avatar: undefined, // TODO: Добавить аватары
-          isOnline: false, // TODO: Добавить статус онлайн
-          unreadCount: 0, // TODO: Подсчет непрочитанных
+          messageStatus: lastMessage?.status as 'unread' | 'read' | 'error' | undefined,
+          isOutgoing: isMyMessage,
+          status: 'offline' as const, // TODO: Реальный статус пользователей
           // Добавляем поле для сортировки
           _lastMessageTime: lastMessage?.created_at || chat.updated_at,
         };

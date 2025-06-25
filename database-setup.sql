@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS messages (
   sender_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   content TEXT NOT NULL,
   message_type TEXT CHECK (message_type IN ('text', 'image', 'file', 'audio')) NOT NULL DEFAULT 'text',
+  status TEXT CHECK (status IN ('unread', 'read', 'error')) NOT NULL DEFAULT 'unread',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

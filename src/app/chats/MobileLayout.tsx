@@ -15,10 +15,10 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   const isInChat = !!chatId;
 
   return (
-    <div className='md:hidden flex flex-1 flex-col h-[calc(100vh-72px)]'>
+    <div className='md:hidden w-full flex flex-1 flex-col h-[calc(100vh-72px)]'>
       {!isInChat ? (
         /* Мобильный список чатов */
-        <div className='flex flex-col h-full bg-[var(--c-bg-subtle)]'>
+        <div className='flex flex-col w-full h-full bg-[var(--c-bg-subtle)]'>
           {/* Поиск по чатам */}
           <Search />
 
