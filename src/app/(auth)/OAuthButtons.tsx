@@ -38,7 +38,7 @@ export default function OAuthButtons() {
         className='hover:bg-[var(--c-bg-default)]!'
       />
 
-      <Row
+      {/* <Row
         center={
           <div className='w-[80px] flex items-center justify-start gap-3'>
             <FaTwitch className='text-[var(--c-text-primary)] text-lg' />
@@ -47,7 +47,7 @@ export default function OAuthButtons() {
         }
         onClick={() => handleOAuthLogin('twitch')}
         className='hover:bg-[var(--c-bg-default)]!'
-      />
+      /> */}
     </Card>
   );
 }

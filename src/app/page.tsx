@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button, Card } from 'dobruniaui';
 import { createBrowserClient } from '@/shared/lib/supabase';
+import { homePage } from '@/shared/variables/home.page';
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
@@ -54,9 +55,9 @@ export default function Home() {
             </p>
 
             <div className='flex w-full gap-3 justify-center'>
-              <Link href='/dashboard'>
+              <Link href={homePage}>
                 <Button variant='primary' size='medium'>
-                  Перейти в Dashboard
+                  Продолжить
                 </Button>
               </Link>
             </div>
