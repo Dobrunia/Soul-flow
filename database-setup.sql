@@ -105,13 +105,17 @@ CREATE POLICY "Users can send messages to their chats" ON messages
 
 -- Функция для автоматического создания профиля при регистрации
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, full_name)
   VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
   RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Триггер для создания профиля
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -121,12 +125,15 @@ CREATE TRIGGER on_auth_user_created
 
 -- Функция для обновления updated_at
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 BEGIN
   NEW.updated_at = timezone('utc'::text, now());
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Триггеры для обновления updated_at
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON profiles

@@ -2,12 +2,16 @@
 
 import { ActionsMenu } from 'dobruniaui';
 import { createBrowserClient } from '@/shared/lib/supabase';
+import { useDispatch } from 'react-redux';
+import { clearUser } from '@/shared/store/userSlice';
 
 interface UserActionsMenuProps {
   onClose: () => void;
 }
 
 export default function UserActionsMenu({ onClose }: UserActionsMenuProps) {
+  const dispatch = useDispatch();
+
   const handleSignOut = async () => {
     try {
       const supabase = createBrowserClient();
@@ -19,6 +23,7 @@ export default function UserActionsMenu({ onClose }: UserActionsMenuProps) {
         return;
       }
 
+      dispatch(clearUser());
       window.location.href = '/login';
     } catch (error) {
       console.error('Logout failed:', error);

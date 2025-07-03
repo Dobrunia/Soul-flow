@@ -19,7 +19,7 @@ export default function NotFound() {
 
         <div className='space-y-3'>
           <Link href='/' className='block'>
-            <button className='w-full px-4 py-2 rounded-lg transition-colors hover:opacity-90 bg-[var(--c-accent)] text-[var(--c-text-inverse)]'>
+            <button className='w-full px-4 py-2 rounded-lg transition-colors hover:opacity-90 bg-[var(--c-accent)] text-[var(--c-text-inverse)] cursor-pointer'>
               На главную
             </button>
           </Link>

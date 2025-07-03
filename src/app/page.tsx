@@ -5,9 +5,12 @@ import Link from 'next/link';
 import { Button, Card } from 'dobruniaui';
 import { createBrowserClient } from '@/shared/lib/supabase';
 import { homePage } from '@/shared/variables/home.page';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUser, selectUser, SupabaseUser } from '@/shared/store/userSlice';
 
 export default function Home() {
-  const [user, setUser] = useState<any>(null);
+  const dispatch = useDispatch();
+  const user = useSelector(selectUser);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,7 +20,7 @@ export default function Home() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        setUser(user);
+        dispatch(setUser(user as SupabaseUser | null));
       } catch (error) {
         console.error('Error checking user:', error);
       } finally {
@@ -26,7 +29,7 @@ export default function Home() {
     };
 
     checkUser();
-  }, []);
+  }, [dispatch]);
 
   if (loading) {
     return (
