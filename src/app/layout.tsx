@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import ThemeInitializer from '@/shared/ui/ThemeInitializer';
-import Header from '../shared/ui/Header';
-import UserInitializer from '@/shared/api/UserInitializer';
+import Header from '../features/Header/Header';
 import ReduxProvider from '@/shared/store/ReduxProvider';
+import UserInitializer from '@/shared/api/UserInitializer';
 
 export const metadata: Metadata = {
   title: 'Soul Flow',

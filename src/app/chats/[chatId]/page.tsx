@@ -11,7 +11,9 @@ import {
   LoadingSpinner,
 } from 'dobruniaui';
 import MessageInput from './MessageInput';
-import { createBrowserClient } from '@/shared/lib/supabase';
+import { getSupabaseBrowser } from '@/shared/lib/supabase';
+
+const supabase = getSupabaseBrowser();
 
 interface ChatData {
   id: string;
@@ -28,8 +30,6 @@ const isValidChatId = (chatId: string): boolean => {
 
 // Проверка доступа к чату через Supabase
 const checkChatAccess = async (chatId: string, userId: string): Promise<boolean> => {
-  const supabase = createBrowserClient();
-
   const { data, error } = await supabase
     .from('chat_participants')
     .select('id')
@@ -61,8 +61,6 @@ export default function ChatPage() {
   // Загрузка данных чата и сообщений
   useEffect(() => {
     const loadChatData = async () => {
-      const supabase = createBrowserClient();
-
       // Получаем текущего пользователя
       const {
         data: { user },

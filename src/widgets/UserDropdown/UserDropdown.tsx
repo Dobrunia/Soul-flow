@@ -2,13 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import UserActionsMenu from './UserActionsMenu';
+import { useSelector } from 'react-redux';
+import { selectUser } from '@/shared/store/userSlice';
+import { Avatar } from 'dobruniaui';
 
-interface UserDropdownProps {
-  userName: string;
-  userEmail: string;
-}
-
-export default function UserDropdown({ userName, userEmail }: UserDropdownProps) {
+export default function UserDropdown() {
+  const user = useSelector(selectUser);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -37,14 +36,12 @@ export default function UserDropdown({ userName, userEmail }: UserDropdownProps)
         onClick={() => setIsOpen(!isOpen)}
       >
         {/* Аватар */}
-        <div className='w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium text-[var(--c-text-inverse)] bg-[var(--c-accent)]'>
-          {userName[0]?.toUpperCase()}
-        </div>
+        <Avatar src={user?.avatar_url || ''} name={user?.username || ''} />
 
         {/* Имя пользователя */}
         <div className='flex flex-col'>
-          <span className='text-sm font-medium text-[var(--c-text-primary)]'>{userName}</span>
-          <span className='text-xs text-[var(--c-text-secondary)]'>{userEmail}</span>
+          <span className='text-sm font-medium text-[var(--c-text-primary)]'>{user?.username}</span>
+          <span className='text-xs text-[var(--c-text-secondary)]'>{user?.email}</span>
         </div>
 
         {/* Стрелка */}

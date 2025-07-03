@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { createBrowserClient } from '@/shared/lib/supabase';
+import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { Card, TextField, Button, Alert } from 'dobruniaui';
 import { homePage } from '@/shared/variables/home.page';
+
+const supabase = getSupabaseBrowser();
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -51,7 +53,6 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const supabase = createBrowserClient();
       const { error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,

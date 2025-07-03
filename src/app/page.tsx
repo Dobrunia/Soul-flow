@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button, Card } from 'dobruniaui';
-import { createBrowserClient } from '@/shared/lib/supabase';
+import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { homePage } from '@/shared/variables/home.page';
 import { useDispatch, useSelector } from 'react-redux';
-import { setUser, selectUser, SupabaseUser } from '@/shared/store/userSlice';
+import { setUser, selectUser, Profile } from '@/shared/store/userSlice';
+
+const supabase = getSupabaseBrowser();
 
 export default function Home() {
   const dispatch = useDispatch();
@@ -16,11 +18,10 @@ export default function Home() {
   useEffect(() => {
     const checkUser = async () => {
       try {
-        const supabase = createBrowserClient();
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        dispatch(setUser(user as SupabaseUser | null));
+        dispatch(setUser(user as Profile | null));
       } catch (error) {
         console.error('Error checking user:', error);
       } finally {

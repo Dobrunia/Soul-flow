@@ -1,79 +1,124 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Modal, TextField, Row, LoadingSpinner, Alert, Avatar } from 'dobruniaui';
-import { createBrowserClient } from '@/shared/lib/supabase';
+import { useEffect, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
+import { getSupabaseBrowser } from '@/shared/lib/supabase';
+import { selectUser } from '@/shared/store/userSlice';
+
+const supabase = getSupabaseBrowser();
+
+type Status = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 interface UsersSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+/* debounce ↓ */
+function useDebounce<T>(value: T, delay = 300): T {
+  const [deb, setDeb] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDeb(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return deb;
+}
+/* ───────── */
+
 export default function UsersSearchModal({ isOpen, onClose }: UsersSearchModalProps) {
-  const [userSearch, setUserSearch] = useState('');
+  const me = useSelector(selectUser); // ← текущий пользователь
+  const [query, setQuery] = useState('');
+  const q = useDebounce(query.trim(), 300);
+
   const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<Status>('idle');
+  const requestId = useRef(0);
 
   useEffect(() => {
-    if (!isOpen || !userSearch.trim()) {
+    if (!q) {
       setUsers([]);
+      setStatus('idle');
       return;
     }
-    setLoading(true);
-    const supabase = createBrowserClient();
-    // Поиск по email и full_name (OR)
-    supabase
+
+    const current = ++requestId.current;
+    setStatus('loading');
+
+    let req = supabase
       .from('profiles')
-      .select('id, email, full_name, avatar_url')
-      .or(`email.ilike.%${userSearch}%,full_name.ilike.%${userSearch}%`)
-      .limit(10)
-      .then(({ data, error }) => {
-        setUsers(data || []);
-        setLoading(false);
-      });
-  }, [userSearch, isOpen]);
+      .select('id, email, username, avatar_url')
+      .ilike('username', `%${q}%`)
+      .limit(10);
+
+    if (me?.id) req = req.neq('id', me.id); // <-- исключаем себя
+
+    req.then(({ data, error }) => {
+      if (current !== requestId.current) return; // устаревший ответ
+      if (error) {
+        console.error(error);
+        setStatus('error');
+        setUsers([]);
+        return;
+      }
+      if (!data || data.length === 0) {
+        setStatus('empty');
+        setUsers([]);
+      } else {
+        setStatus('success');
+        setUsers(data);
+      }
+    });
+  }, [q, me?.id]);
+
+  /* UI ↓ */
+  const content = (() => {
+    switch (status) {
+      case 'loading':
+        return (
+          <div className='flex justify-center py-6'>
+            <LoadingSpinner />
+          </div>
+        );
+      case 'empty':
+        return <Alert type='info'>Ничего не найдено</Alert>;
+      case 'error':
+        return <Alert type='error'>Ошибка поиска, попробуйте позже</Alert>;
+      case 'success':
+        return users.map((u) => (
+          <Row
+            key={u.id}
+            left={<Avatar src={u.avatar_url} name={u.username} size='sm' showStatus={false} />}
+            center={
+              <div>
+                <div className='font-medium'>{u.username}</div>
+                <div className='text-xs text-[var(--c-text-secondary)]'>{u.email}</div>
+              </div>
+            }
+            onClick={() => console.log(u)}
+            centerJustify='left'
+            className='rounded-[8px]'
+          />
+        ));
+      default:
+        return null; // idle
+    }
+  })();
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title='Найти пользователя'>
       <div className='flex flex-col gap-4 p-2'>
         <TextField
           label='Поиск пользователей'
-          value={userSearch}
-          onChange={(e) => setUserSearch(e.target.value)}
-          helperText='Введите email или имя'
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          helperText='Введите имя пользователя'
           autoFocus
+          autoComplete={false}
         />
-        <div className='mt-4 p-2 border-[var(--c-border)] border-[2px] rounded-[8px]'>
-          {loading ? (
-            <div className='flex justify-center'>
-              <LoadingSpinner />
-            </div>
-          ) : users.length === 0 && userSearch.trim() ? (
-            <Alert type='info'>Пользователь не найден</Alert>
-          ) : (
-            users.map((user) => (
-              <Row
-                key={user.id}
-                left={
-                  <Avatar
-                    src={user.avatar_url}
-                    name={user.full_name || user.email}
-                    size='sm'
-                    showStatus={false}
-                  />
-                }
-                center={
-                  <div>
-                    <div className='font-medium'>{user.full_name || user.email}</div>
-                    <div className='text-xs text-[var(--c-text-secondary)]'>{user.email}</div>
-                  </div>
-                }
-                onClick={() => console.log(user)}
-                centerJustify='left'
-                className='rounded-[8px]'
-              />
-            ))
-          )}
+
+        <div className='mt-4 p-2 border-[var(--c-border)] border-2 rounded-[8px] overflow-y-auto min-h-[160px] max-h-[320px] h-[240px]'>
+          {content}
         </div>
       </div>
     </Modal>

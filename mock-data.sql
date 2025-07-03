@@ -1,11 +1,11 @@
 -- Мок данные для тестирования чатов
 
 -- Профили пользователей (привязанные к существующим auth.users)
-INSERT INTO profiles (id, email, full_name, avatar_url) VALUES 
+INSERT INTO profiles (id, email, username, avatar_url) VALUES 
   -- Первый пользователь
-  ('4907c7ba-ff50-4b11-bde8-6822438d7226', 'dobruniak@rambler.ru', 'Добрыня', 'https://api.dicebear.com/7.x/avataaars/svg?seed=dobruniak'),
+  ('4907c7ba-ff50-4b11-bde8-6822438d7226', 'dobruniak@rambler.ru', 'dobruniak', 'https://api.dicebear.com/7.x/avataaars/svg?seed=dobruniak'),
   -- Второй пользователь
-  ('6dd315e4-6901-4780-b830-d7c105f5ee5f', 'dobruniaqwerty@gmail.com', 'Добрыня Альт', 'https://api.dicebear.com/7.x/avataaars/svg?seed=dobruniaqwerty')
+  ('6dd315e4-6901-4780-b830-d7c105f5ee5f', 'dobruniaqwerty@gmail.com', 'dobruniaqwerty', 'https://api.dicebear.com/7.x/avataaars/svg?seed=dobruniaqwerty')
 ON CONFLICT (id) DO NOTHING;
 
 -- Чаты

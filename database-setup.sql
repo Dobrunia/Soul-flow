@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
-  full_name TEXT,
+  username TEXT NOT NULL,
   avatar_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -73,9 +73,24 @@ CREATE POLICY "Users can create chats" ON chats
 CREATE POLICY "Chat creators can update their chats" ON chats
   FOR UPDATE USING (auth.uid() = created_by);
 
--- Политики безопасности для chat_participants
+-- ❶ Функция, которая проверяет, состоит ли текущий юзер в чате
+CREATE OR REPLACE FUNCTION public.is_chat_member(_chat_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM chat_participants
+    WHERE chat_id = _chat_id
+      AND user_id = auth.uid()
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_chat_member(uuid) TO anon, authenticated;
+
+DROP POLICY IF EXISTS "Users can view participants of their chats" ON chat_participants;
 CREATE POLICY "Users can view participants of their chats" ON chat_participants
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING ( public.is_chat_member(chat_id) );
 
 CREATE POLICY "Chat creators can add participants" ON chat_participants
   FOR INSERT WITH CHECK (
@@ -110,9 +125,27 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
+DECLARE
+  _username TEXT;
+  _avatar_url TEXT;
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name)
-  VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
+  _username := COALESCE(
+    new.raw_user_meta_data->>'preferred_username',
+    split_part(new.email, '@', 1)
+  );
+  _avatar_url := COALESCE(
+    new.raw_user_meta_data->>'avatar_url',
+    new.raw_user_meta_data->>'picture',
+    NULL
+  );
+
+  INSERT INTO public.profiles (id, email, username, avatar_url)
+  VALUES (
+    new.id,
+    new.email,
+    _username,
+    NULLIF(_avatar_url, '')
+  );
   RETURN new;
 END;
 $$;

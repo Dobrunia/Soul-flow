@@ -1,18 +1,18 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 
-// Минимальный тип пользователя из Supabase
-export interface SupabaseUser {
+// Тип пользователя из Supabase
+export interface Profile {
   id: string;
-  email: string | null;
-  aud?: string;
-  role?: string;
-  created_at?: string;
-  // Добавь другие поля, если используешь
+  email: string;
+  username: string | null;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface UserState {
-  user: SupabaseUser | null;
+  user: Profile | null;
 }
 
 const initialState: UserState = {
@@ -23,7 +23,7 @@ const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setUser(state, action: PayloadAction<SupabaseUser | null>) {
+    setUser(state, action: PayloadAction<Profile | null>) {
       state.user = action.payload;
     },
     clearUser(state) {

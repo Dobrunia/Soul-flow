@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatList, type ChatListItem } from 'dobruniaui';
-import { createBrowserClient } from '@/shared/lib/supabase';
+import { getSupabaseBrowser } from '@/shared/lib/supabase';
+
+const supabase = getSupabaseBrowser();
 
 // Типы для Supabase
 interface Chat {
@@ -28,8 +30,6 @@ export default function ChatListComponent() {
       setIsLoading(true);
       setError(null);
 
-      const supabase = createBrowserClient();
-
       // Получаем текущего пользователя
       const {
         data: { user },
@@ -47,6 +47,7 @@ export default function ChatListComponent() {
         .select(
           `
           chat_id,
+          user_id,
           chats!inner(
             id,
             name,
@@ -69,6 +70,25 @@ export default function ChatListComponent() {
         return;
       }
 
+      // Получаем id всех direct чатов
+      const directChatIds = chatParticipants
+        .filter((cp: any) => cp.chats.type === 'direct')
+        .map((cp: any) => cp.chat_id);
+
+      // Получаем профили участников для direct чатов
+      let directChatProfiles: Record<string, any> = {};
+      if (directChatIds.length > 0) {
+        const { data: participantsData } = await supabase
+          .from('chat_participants')
+          .select('chat_id, user_id, profiles(username, avatar_url)')
+          .in('chat_id', directChatIds);
+
+        for (const p of participantsData || []) {
+          if (!directChatProfiles[p.chat_id]) directChatProfiles[p.chat_id] = [];
+          directChatProfiles[p.chat_id].push(p);
+        }
+      }
+
       // Получаем последние сообщения для каждого чата с информацией об отправителе
       const chatIds = chatParticipants.map((cp: any) => cp.chat_id);
 
@@ -77,11 +97,11 @@ export default function ChatListComponent() {
           .from('messages')
           .select(
             `
-            content, 
-            created_at, 
+            content,
+            created_at,
             sender_id,
             status,
-            profiles!inner(full_name)
+            profiles!inner(username)
           `
           )
           .eq('chat_id', chatId)
@@ -107,22 +127,43 @@ export default function ChatListComponent() {
         let displayMessage = 'Пока нет сообщений';
 
         if (lastMessage) {
-          const senderName =
-            (lastMessage.profiles && lastMessage.profiles[0])?.full_name || 'Неизвестный';
+          let senderName = 'Неизвестный';
+          if (lastMessage.profiles) {
+            if (Array.isArray(lastMessage.profiles)) {
+              senderName =
+                (lastMessage.profiles[0] as { username?: string })?.username || senderName;
+            } else {
+              senderName = (lastMessage.profiles as { username?: string })?.username || senderName;
+            }
+          }
 
           if (chat.type === 'group' && !isMyMessage) {
-            // В групповых чатах показываем имя отправителя для чужих сообщений
             displayMessage = `${senderName}: ${lastMessage.content}`;
           } else {
-            // В остальных случаях просто текст сообщения
             displayMessage = lastMessage.content;
+          }
+        }
+
+        // Для direct чатов имя и аватар — это собеседник
+        let name = chat.name;
+        let avatar = undefined;
+        if (chat.type === 'direct' && directChatProfiles[chat.id]) {
+          const other = directChatProfiles[chat.id].find((p: any) => p.user_id !== user.id);
+          if (other && other.profiles) {
+            if (Array.isArray(other.profiles)) {
+              name = other.profiles[0]?.username || name;
+              avatar = other.profiles[0]?.avatar_url;
+            } else {
+              name = other.profiles.username || name;
+              avatar = other.profiles.avatar_url;
+            }
           }
         }
 
         return {
           id: chat.id,
-          avatar: undefined, // TODO: Добавить аватары
-          name: chat.name,
+          avatar,
+          name,
           lastMessage: displayMessage,
           time: lastMessage
             ? new Date(lastMessage.created_at).toLocaleTimeString('ru-RU', {
@@ -132,8 +173,7 @@ export default function ChatListComponent() {
             : '',
           messageStatus: lastMessage?.status as 'unread' | 'read' | 'error' | undefined,
           isOutgoing: isMyMessage,
-          status: 'offline' as const, // TODO: Реальный статус пользователей
-          // Добавляем поле для сортировки
+          status: 'offline' as const,
           _lastMessageTime: lastMessage?.created_at || chat.updated_at,
         };
       });
