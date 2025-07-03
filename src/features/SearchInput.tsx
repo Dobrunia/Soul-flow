@@ -1,14 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { SearchInput } from 'dobruniaui';
+import { SearchInput, Button } from 'dobruniaui';
+import UsersSearchModal from '@/widgets/UsersSearch/UsersSearchModal';
 
 export default function Search() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <div className='p-[14px] border-r border-[var(--c-border)]'>
-      <SearchInput placeholder={'Поиск...'} value={searchQuery} onChange={setSearchQuery} />
+    <div className='flex items-center justify-between border-r border-[var(--c-border)] p-[12]'>
+      <SearchInput
+        placeholder={'Поиск...'}
+        value={searchQuery}
+        onChange={setSearchQuery}
+        className='w-[80%]!'
+      />
+      <Button variant='ghost' shape='square' onClick={() => setModalOpen(true)}>
+        +
+      </Button>
+      <UsersSearchModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }

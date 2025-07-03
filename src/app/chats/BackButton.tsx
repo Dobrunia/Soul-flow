@@ -13,13 +13,10 @@ export default function BackButton() {
   return (
     <Row
       left={'←'}
-      center={
-        <div className='align-left w-full'>
-          <h2 className='font-medium'>Назад к чатам</h2>
-        </div>
-      }
+      center={<h2 className='font-medium'>Назад к чатам</h2>}
       className='bg-[var(--c-bg-subtle)] border-b border-[var(--c-border)]'
       onClick={handleBackToChats}
+      centerJustify='left'
     />
   );
 }

@@ -159,12 +159,9 @@ export default function ChatPage() {
       {/* Шапка чата */}
       <Row
         left={<Avatar name={chat?.name || 'Чат'} size='md' status='online' showStatus />}
-        center={
-          <div className='align-left w-full'>
-            <h2 className='font-medium'>{chat?.name || 'Чат'}</h2>
-          </div>
-        }
+        center={<h2 className='font-medium'>{chat?.name || 'Чат'}</h2>}
         className='bg-[var(--c-bg-subtle)] border-b border-[var(--c-border)]'
+        centerJustify='left'
       />
 
       {/* История сообщений */}
