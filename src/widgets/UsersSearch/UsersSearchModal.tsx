@@ -76,7 +76,7 @@ export default function UsersSearchModal({ isOpen, onClose }: UsersSearchModalPr
     switch (status) {
       case 'loading':
         return (
-          <div className='flex justify-center py-6'>
+          <div className='flex justify-center h-full items-center'>
             <LoadingSpinner />
           </div>
         );

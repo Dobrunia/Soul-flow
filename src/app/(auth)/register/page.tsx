@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { createBrowserClient } from '@/shared/lib/supabase';
+import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { Card, TextField, Button, Alert } from 'dobruniaui';
 import { homePage } from '@/shared/variables/home.page';
+
+const supabase = getSupabaseBrowser();
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -81,7 +83,6 @@ export default function RegisterPage() {
     setMessage('');
 
     try {
-      const supabase = createBrowserClient();
       console.log('Attempting registration for:', trimmedEmail);
 
       const { data, error } = await supabase.auth.signUp({

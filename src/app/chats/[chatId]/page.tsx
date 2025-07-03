@@ -153,7 +153,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className='flex-1 flex flex-col bg-[var(--c-bg-default)] h-full'>
+    <div className='flex flex-col bg-[var(--c-bg-default)] h-full'>
       {/* Шапка чата */}
       <Row
         left={<Avatar name={chat?.name || 'Чат'} size='md' status='online' showStatus />}

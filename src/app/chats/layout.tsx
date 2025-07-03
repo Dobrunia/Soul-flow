@@ -9,7 +9,7 @@ interface ChatsLayoutProps {
 
 export default function ChatsLayout({ children }: ChatsLayoutProps) {
   return (
-    <div className='flex flex-1 h-[calc(100vh-72px)]'>
+    <div className='flex h-[calc(100vh-72px)]'>
       {/* Desktop Layout */}
       <div className='hidden md:flex flex-1'>
         {/* Sidebar с списком чатов */}

@@ -27,7 +27,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
         </div>
       ) : (
         /* Мобильный чат с кнопкой назад */
-        <div className='flex flex-col h-[calc(100vh-118px)] bg-[var(--c-bg-default)]'>
+        <div className='flex flex-col h-full bg-[var(--c-bg-default)]'>
           {/* Шапка с кнопкой назад */}
           <BackButton />
 

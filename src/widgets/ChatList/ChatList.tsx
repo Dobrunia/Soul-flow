@@ -219,7 +219,7 @@ export default function ChatListComponent() {
       selectedId={selectedChatId}
       onSelect={handleChatSelect}
       loading={isLoading}
-      skeletonCount={6}
+      skeletonCount={4}
       className='h-full mt-[1px] border-r border-[var(--c-border)]'
     />
   );

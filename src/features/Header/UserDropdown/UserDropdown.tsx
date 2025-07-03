@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import UserActionsMenu from './UserActionsMenu';
 import { useSelector } from 'react-redux';
 import { selectUser } from '@/shared/store/userSlice';
-import { Avatar } from 'dobruniaui';
+import { Avatar, Skeleton, DESIGN_TOKENS } from 'dobruniaui';
 
 export default function UserDropdown() {
   const user = useSelector(selectUser);
@@ -36,12 +36,31 @@ export default function UserDropdown() {
         onClick={() => setIsOpen(!isOpen)}
       >
         {/* Аватар */}
-        <Avatar src={user?.avatar_url || ''} name={user?.username || ''} />
+        {user ? (
+          <Avatar src={user?.avatar_url || ''} name={user?.username || ''} />
+        ) : (
+          <Skeleton
+            variant='circular'
+            width={DESIGN_TOKENS.baseHeight.medium}
+            height={DESIGN_TOKENS.baseHeight.medium}
+          />
+        )}
 
         {/* Имя пользователя */}
         <div className='flex flex-col'>
-          <span className='text-sm font-medium text-[var(--c-text-primary)]'>{user?.username}</span>
-          <span className='text-xs text-[var(--c-text-secondary)]'>{user?.email}</span>
+          {user ? (
+            <>
+              <span className='text-sm font-medium text-[var(--c-text-primary)]'>
+                {user?.username}
+              </span>
+              <span className='text-xs text-[var(--c-text-secondary)]'>{user?.email}</span>
+            </>
+          ) : (
+            <>
+              <Skeleton width={90} height={DESIGN_TOKENS.baseHeight.tiny} />
+              <Skeleton width={118} height={DESIGN_TOKENS.baseHeight.tiny} />
+            </>
+          )}
         </div>
 
         {/* Стрелка */}
