@@ -5,8 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { ChatList, type ChatListItem } from 'dobruniaui';
 import { getSupabaseBrowser } from '@/shared/lib/supabase';
 
-const supabase = getSupabaseBrowser();
-
 // Типы для Supabase
 interface Chat {
   id: string;
@@ -29,7 +27,7 @@ export default function ChatListComponent() {
     try {
       setIsLoading(true);
       setError(null);
-
+      const supabase = getSupabaseBrowser();
       // Получаем текущего пользователя
       const {
         data: { user },

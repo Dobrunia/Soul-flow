@@ -16,8 +16,17 @@ export default function Search() {
         onChange={setSearchQuery}
         className='w-[80%]!'
       />
-      <Button variant='ghost' shape='square' onClick={() => setModalOpen(true)}>
-        +
+      <Button variant='secondary' shape='square' onClick={() => setModalOpen(true)}>
+        <svg
+          width='20'
+          height='20'
+          fill='none'
+          stroke='currentColor'
+          strokeWidth='2'
+          viewBox='0 0 24 24'
+        >
+          <path d='M12 5v14m7-7H5' strokeLinecap='round' strokeLinejoin='round' />
+        </svg>
       </Button>
       <UsersSearchModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </div>

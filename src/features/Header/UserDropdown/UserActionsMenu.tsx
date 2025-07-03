@@ -5,8 +5,6 @@ import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { useDispatch } from 'react-redux';
 import { clearUser } from '@/shared/store/userSlice';
 
-const supabase = getSupabaseBrowser();
-
 interface UserActionsMenuProps {
   onClose: () => void;
 }
@@ -16,6 +14,7 @@ export default function UserActionsMenu({ onClose }: UserActionsMenuProps) {
 
   const handleSignOut = async () => {
     try {
+      const supabase = getSupabaseBrowser();
       const { error } = await supabase.auth.signOut();
 
       if (error) {

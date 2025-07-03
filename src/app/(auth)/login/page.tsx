@@ -6,8 +6,6 @@ import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { Card, TextField, Button, Alert } from 'dobruniaui';
 import { homePage } from '@/shared/variables/home.page';
 
-const supabase = getSupabaseBrowser();
-
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,6 +51,7 @@ export default function LoginPage() {
     setError('');
 
     try {
+      const supabase = getSupabaseBrowser();
       const { error } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password: trimmedPassword,

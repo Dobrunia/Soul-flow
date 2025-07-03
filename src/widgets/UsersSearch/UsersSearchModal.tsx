@@ -6,8 +6,6 @@ import { useSelector } from 'react-redux';
 import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { selectUser } from '@/shared/store/userSlice';
 
-const supabase = getSupabaseBrowser();
-
 type Status = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 interface UsersSearchModalProps {
@@ -44,7 +42,7 @@ export default function UsersSearchModal({ isOpen, onClose }: UsersSearchModalPr
 
     const current = ++requestId.current;
     setStatus('loading');
-
+    const supabase = getSupabaseBrowser();
     let req = supabase
       .from('profiles')
       .select('id, email, username, avatar_url')
