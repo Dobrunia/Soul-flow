@@ -1,6 +1,6 @@
 import React from 'react';
 import ChatList from '../../widgets/ChatList/ChatList';
-import Search from '../../features/SearchInput';
+import MyChatsSearchInput from '../../widgets/Search/MyChatsSearchInput';
 import MobileLayout from './MobileLayout';
 
 interface ChatsLayoutProps {
@@ -15,7 +15,7 @@ export default function ChatsLayout({ children }: ChatsLayoutProps) {
         {/* Sidebar с списком чатов */}
         <div className='w-80 flex flex-col bg-[var(--c-bg-subtle)]'>
           {/* Поиск по чатам */}
-          <Search />
+          <MyChatsSearchInput />
 
           {/* Список чатов */}
           <ChatList />

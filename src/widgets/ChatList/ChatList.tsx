@@ -5,15 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { ChatList, type ChatListItem } from 'dobruniaui';
 import { getSupabaseBrowser } from '@/shared/lib/supabase';
 
-// Типы для Supabase
-interface Chat {
-  id: string;
-  name: string;
-  type: 'direct' | 'group';
-  created_at: string;
-  updated_at: string;
-}
-
 export default function ChatListComponent() {
   const params = useParams();
   const router = useRouter();

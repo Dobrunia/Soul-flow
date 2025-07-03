@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { SearchInput, Button } from 'dobruniaui';
-import UsersSearchModal from '@/widgets/UsersSearch/UsersSearchModal';
+import UsersSearchModal from './UsersSearch/UsersSearchModal';
 
-export default function Search() {
+export default function MyChatsSearchInput() {
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
 

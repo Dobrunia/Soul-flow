@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import ChatList from '../../widgets/ChatList/ChatList';
-import Search from '../../features/SearchInput';
+import MyChatsSearchInput from '../../widgets/Search/MyChatsSearchInput';
 import BackButton from './BackButton';
 
 interface MobileLayoutProps {
@@ -20,7 +20,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
         /* Мобильный список чатов */
         <div className='flex flex-col w-full h-full bg-[var(--c-bg-subtle)]'>
           {/* Поиск по чатам */}
-          <Search />
+          <MyChatsSearchInput />
 
           {/* Список чатов */}
           <ChatList />
