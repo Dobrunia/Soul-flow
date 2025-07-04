@@ -6,6 +6,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   email TEXT UNIQUE NOT NULL,
   username TEXT NOT NULL,
   avatar_url TEXT,
+  status TEXT
+      CHECK (status IN ('online', 'offline', 'dnd', 'invisible'))
+      NOT NULL DEFAULT 'offline',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

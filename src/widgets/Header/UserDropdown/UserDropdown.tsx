@@ -37,7 +37,7 @@ export default function UserDropdown() {
       >
         {/* Аватар */}
         {user ? (
-          <Avatar src={user?.avatar_url || ''} name={user?.username || ''} />
+          <Avatar src={user?.avatar_url || ''} name={user?.username || ''} status={user?.status} />
         ) : (
           <Skeleton
             variant='circular'

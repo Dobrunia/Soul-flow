@@ -4,6 +4,7 @@ import ThemeInitializer from '@/shared/ui/ThemeInitializer';
 import Header from '../widgets/Header/Header';
 import ReduxProvider from '@/shared/store/ReduxProvider';
 import UserInitializer from '@/shared/api/UserInitializer';
+import StatusInitializer from '@/shared/api/StatusInitializer';
 
 export const metadata: Metadata = {
   title: 'Soul Flow',
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <ReduxProvider>
           <UserInitializer />
+          <StatusInitializer />
           <ThemeInitializer />
           <Header />
           {children}

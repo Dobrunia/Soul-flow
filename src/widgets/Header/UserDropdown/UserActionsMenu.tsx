@@ -3,7 +3,10 @@
 import { ActionsMenu } from 'dobruniaui';
 import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { useDispatch } from 'react-redux';
-import { clearUser } from '@/shared/store/userSlice';
+import { clearUser, selectUser } from '@/shared/store/userSlice';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useSelector } from 'react-redux';
 
 interface UserActionsMenuProps {
   onClose: () => void;
@@ -11,27 +14,45 @@ interface UserActionsMenuProps {
 
 export default function UserActionsMenu({ onClose }: UserActionsMenuProps) {
   const dispatch = useDispatch();
+  const router = useRouter();
+  const user = useSelector(selectUser);
+  const [busy, setBusy] = useState(false);
 
   const handleSignOut = async () => {
-    try {
-      const supabase = getSupabaseBrowser();
-      const { error } = await supabase.auth.signOut();
+    if (busy) return;
+    setBusy(true);
 
+    const supabase = getSupabaseBrowser();
+
+    try {
+      /* 1️⃣  помечаем себя offline, пока ещё есть auth */
+      if (user?.id) {
+        await supabase.from('profiles').update({ status: 'offline' }).eq('id', user.id);
+      }
+
+      /* 2️⃣  выходим из Supabase */
+      const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Logout error:', error);
+        setBusy(false);
         return;
       }
 
+      /* 3️⃣  чистим локальный профиль + закрываем меню + редирект */
       dispatch(clearUser());
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout failed:', error);
+      onClose();
+      router.replace('/login');
+    } catch (e) {
+      console.error('Logout failed:', e);
+    } finally {
+      setBusy(false);
     }
   };
 
   const menuItems = [
     {
-      label: 'Выйти',
+      label: busy ? 'Выходим…' : 'Выйти',
+      disabled: busy,
       icon: (
         <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
           <path

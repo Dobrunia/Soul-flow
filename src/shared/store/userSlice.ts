@@ -7,6 +7,7 @@ export interface Profile {
   email: string;
   username: string | null;
   avatar_url: string | null;
+  status: 'online' | 'offline' | 'dnd' | 'invisible';
   created_at: string;
   updated_at: string;
 }
