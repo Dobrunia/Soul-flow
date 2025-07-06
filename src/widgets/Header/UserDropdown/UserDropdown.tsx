@@ -10,8 +10,7 @@ import { selectProfile } from '@/shared/store/profileSlice';
 import { useRouter } from 'next/navigation';
 
 export default function UserDropdown() {
-  /* профиль хранится в Redux (положил UserSessionProvider) */
-  const user = useSelector(selectProfile);
+  const profile = useSelector(selectProfile);
   const router = useRouter();
   const { loading } = useSetProfile(); // только флаг
   const [isOpen, setIsOpen] = useState(false);
@@ -65,8 +64,8 @@ export default function UserDropdown() {
         onClick={() => setIsOpen((o) => !o)}
       >
         {/* Аватар */}
-        {!loading && user ? (
-          <Avatar src={user.avatar_url ?? ''} name={user.username ?? ''} status={user.status} />
+        {!loading && profile ? (
+          <Avatar src={profile.avatar_url ?? ''} name={profile.username ?? ''} status={profile.status} />
         ) : (
           <Skeleton
             variant='circular'
@@ -77,10 +76,10 @@ export default function UserDropdown() {
 
         {/* Имя / почта */}
         <div className='flex flex-col'>
-          {!loading && user ? (
+          {!loading && profile ? (
             <>
-              <span className='text-sm font-medium'>{user.username}</span>
-              <span className='text-xs text-[var(--c-text-secondary)]'>{user.email}</span>
+              <span className='text-sm font-medium'>{profile.username}</span>
+              <span className='text-xs text-[var(--c-text-secondary)]'>{profile.email}</span>
             </>
           ) : (
             <>

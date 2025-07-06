@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { userService } from '@/shared/lib/supabase/Classes/userService';
 import { useSelector } from 'react-redux';
+import { selectProfile } from '@/shared/store/profileSlice';
 
 type Status = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
@@ -25,7 +26,7 @@ export default function UsersSearchModal({
   onClose: () => void;
 }) {
   /* свой профиль уже в Redux */
-  const meId = useSelector((s: any) => s.profile.id) as string | undefined;
+  const meId = useSelector(selectProfile)?.id;
 
   const [query, setQuery] = useState('');
   const q = useDebounce(query.trim(), 300);
