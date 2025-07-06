@@ -1,22 +1,17 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Row } from 'dobruniaui';
 
 export default function BackButton() {
-  const router = useRouter();
-
-  const handleBackToChats = () => {
-    router.push('/chats');
-  };
-
   return (
-    <Row
-      left={'←'}
-      center={<h2 className='font-medium'>Назад к чатам</h2>}
-      className='bg-[var(--c-bg-subtle)] border-b border-[var(--c-border)]'
-      onClick={handleBackToChats}
-      centerJustify='left'
-    />
+    <Link href='/chats'>
+      <Row
+        left={'←'}
+        center={<h2 className='font-medium'>Назад к чатам</h2>}
+        className='bg-[var(--c-bg-subtle)] border-b border-[var(--c-border)]'
+        centerJustify='left'
+      />
+    </Link>
   );
 }
