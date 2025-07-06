@@ -1,10 +1,41 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Button, Card } from 'dobruniaui';
+
+import { Card, Button, LoadingSpinner } from 'dobruniaui';
+import { supabase } from '@/shared/lib/supabase/client'; // singleton-клиент
 import { homePage } from '@/shared/variables/home.page';
 
 export default function Home() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true); // пока читаем cookie
+
+  useEffect(() => {
+    (async () => {
+      /* локально читаем JWT из куки (без network-запроса) */
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        router.replace(homePage); // авторизован → /chats
+      } else {
+        setChecking(false); // гость остался на лэндинге
+      }
+    })();
+  }, [router]);
+
+  /* маленький спиннер, пока идёт быстрая проверка */
+  if (checking)
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <LoadingSpinner size='large' />
+      </div>
+    );
+
+  /* карточка только для неавторизованных */
   return (
     <div className='min-h-screen flex items-center justify-center p-4'>
       <Card variant='elevated' className='text-center max-w-md w-full bg-[var(--c-bg-subtle)]'>
@@ -17,10 +48,15 @@ export default function Home() {
             Современное приложение с полной системой аутентификации
           </p>
 
-          <div className='flex w-full justify-center'>
-            <Link href={homePage}>
+          <div className='flex w-full justify-center gap-3'>
+            <Link href='/login'>
+              <Button variant='ghost' size='medium'>
+                Войти
+              </Button>
+            </Link>
+            <Link href='/register'>
               <Button variant='primary' size='medium' outlined>
-                Продолжить
+                Регистрация
               </Button>
             </Link>
           </div>
