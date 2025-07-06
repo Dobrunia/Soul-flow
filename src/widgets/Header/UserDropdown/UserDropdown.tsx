@@ -4,16 +4,18 @@ import { useState, useRef, useEffect } from 'react';
 import { Avatar, Skeleton, DESIGN_TOKENS, ActionsMenu, type ActionsMenuAction } from 'dobruniaui';
 
 import { useSelector } from 'react-redux';
-import { auth } from '@/shared/lib/supabase/Classes/authService'; // ← sign-out
+import { auth } from '@/shared/lib/supabase/Classes/authService';
 import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
 import { selectProfile } from '@/shared/store/profileSlice';
 import { useRouter } from 'next/navigation';
+import SettingsModal from './Settings/SettingsModal';
 
 export default function UserDropdown() {
   const profile = useSelector(selectProfile);
   const router = useRouter();
   const { loading } = useSetProfile(); // только флаг
   const [isOpen, setIsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   /* закрываем меню при клике вне */
@@ -25,8 +27,30 @@ export default function UserDropdown() {
     return () => document.removeEventListener('mousedown', outside);
   }, [isOpen]);
 
-  /* --------- пункт меню «Выйти» --------- */
   const menuItems: ActionsMenuAction[] = [
+    {
+      label: 'Настройки',
+      icon: (
+        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            strokeWidth={2}
+            d='M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
+          />
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            strokeWidth={2}
+            d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'
+          />
+        </svg>
+      ),
+      onClick: () => {
+        setIsSettingsOpen(true);
+        setIsOpen(false);
+      },
+    },
     {
       label: 'Выйти',
       icon: (
@@ -65,7 +89,11 @@ export default function UserDropdown() {
       >
         {/* Аватар */}
         {!loading && profile ? (
-          <Avatar src={profile.avatar_url ?? ''} name={profile.username ?? ''} status={profile.status} />
+          <Avatar
+            src={profile.avatar_url ?? ''}
+            name={profile.username ?? ''}
+            status={profile.status}
+          />
         ) : (
           <Skeleton
             variant='circular'
@@ -106,6 +134,9 @@ export default function UserDropdown() {
       {isOpen && (
         <ActionsMenu items={menuItems} onClose={() => setIsOpen(false)} className='mt-1 w-full!' />
       )}
+
+      {/* Модальное окно настроек */}
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </div>
   );
 }

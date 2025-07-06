@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { initThemeSystem, setTheme } from 'dobruniaui';
+import { initThemeSystem } from 'dobruniaui';
 
 export default function ThemeInitializer() {
   useEffect(() => {
     initThemeSystem();
-    setTheme('oldmoney');
   }, []);
 
   return null;
