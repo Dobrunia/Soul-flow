@@ -29,8 +29,6 @@ export interface ChatMessage {
 export class ChatService extends SupabaseCore {
   /** Проверка, является ли пользователь участником чата */
   async hasAccess(chatId: string, userId: string): Promise<boolean> {
-    await this.refresh();
-
     const { data, error } = await this.supabase
       .from('chat_participants')
       .select('id')
@@ -43,8 +41,6 @@ export class ChatService extends SupabaseCore {
 
   /** Информация о чате (id, name, type) */
   async getChat(chatId: string): Promise<ChatData | null> {
-    await this.refresh();
-
     const { data, error } = await this.supabase
       .from('chats')
       .select('id, name, type')
@@ -57,8 +53,6 @@ export class ChatService extends SupabaseCore {
 
   /** Список сообщений + данные отправителя */
   async listMessages(chatId: string): Promise<ChatMessage[]> {
-    await this.refresh();
-
     const { data, error } = await this.supabase
       .from('messages')
       .select(
@@ -85,24 +79,29 @@ export class ChatService extends SupabaseCore {
         created_at: m.created_at,
         content: m.content,
         status: m.status,
-        sender: m.profiles
-          ? {
-              id: m.sender_id,
-              username: m.profiles[0].username,
-              avatar_url: m.profiles[0].avatar_url,
-              status: (m.profiles[0].status as Presence) || 'offline',
-            }
-          : undefined,
+        sender:
+          m.profiles && m.profiles.length > 0
+            ? {
+                id: m.sender_id,
+                username: m.profiles[0].username,
+                avatar_url: m.profiles[0].avatar_url,
+                status: (m.profiles[0].status as Presence) || 'offline',
+              }
+            : undefined,
       })) ?? []
     );
   }
 
   /** Отправить текстовое сообщение */
   async sendMessage(chatId: string, content: string): Promise<void> {
-    await this.refresh();
+    await this.ensureValidToken();
+
+    const user = await this.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
 
     const { error } = await this.supabase.from('messages').insert({
       chat_id: chatId,
+      sender_id: user.id,
       content,
       status: 'unread',
     });
@@ -112,11 +111,16 @@ export class ChatService extends SupabaseCore {
 
   /** Добавить реакцию (emoji) к сообщению */
   async addReaction(messageId: string, emoji: string): Promise<void> {
-    await this.refresh();
+    await this.ensureValidToken();
 
-    const { error } = await this.supabase
-      .from('message_reactions')
-      .insert({ message_id: messageId, emoji });
+    const user = await this.getCurrentUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { error } = await this.supabase.from('message_reactions').insert({
+      message_id: messageId,
+      user_id: user.id,
+      emoji,
+    });
 
     if (error) throw error;
   }

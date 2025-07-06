@@ -36,6 +36,23 @@ export class SupabaseCore {
     return error;
   }
 
+  /** Проверяет и обновляет токен только при необходимости */
+  async ensureValidToken(): Promise<void> {
+    const session = await this.getSession();
+    if (!session) {
+      throw new Error('No session found');
+    }
+    
+    // Проверяем, истек ли токен через 5 минут
+    const expiresAt = new Date(session.expires_at! * 1000);
+    const now = new Date();
+    const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+    
+    if (expiresAt <= fiveMinutesFromNow) {
+      await this.refresh();
+    }
+  }
+
   async signOutLocal(): Promise<AuthError | null> {
     const { error } = await this.client.auth.signOut({ scope: 'local' });
     return error;

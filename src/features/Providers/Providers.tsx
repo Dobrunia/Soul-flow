@@ -7,9 +7,9 @@ import { WakeUpProvider } from './api/WakeUpProvider';
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ReduxProvider>
-      <WakeUpProvider>
+      {/* <WakeUpProvider> */}
         <SetProfileProvider>{children}</SetProfileProvider>
-      </WakeUpProvider>
+      {/* </WakeUpProvider> */}
     </ReduxProvider>
   );
 }

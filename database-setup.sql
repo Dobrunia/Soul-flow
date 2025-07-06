@@ -45,11 +45,23 @@ CREATE TABLE IF NOT EXISTS messages (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Таблица реакций на сообщения
+CREATE TABLE IF NOT EXISTS message_reactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  message_id UUID REFERENCES messages(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  emoji TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  
+  UNIQUE(message_id, user_id, emoji)
+);
+
 -- Включаем Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE message_reactions ENABLE ROW LEVEL SECURITY;
 
 -- Политики безопасности для profiles
 CREATE POLICY "Users can view all profiles" ON profiles
@@ -118,6 +130,26 @@ CREATE POLICY "Users can send messages to their chats" ON messages
     EXISTS (
       SELECT 1 FROM chat_participants 
       WHERE chat_id = messages.chat_id AND user_id = auth.uid()
+    )
+  );
+
+-- Политики безопасности для message_reactions
+CREATE POLICY "Users can view reactions in their chats" ON message_reactions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM messages m
+      JOIN chat_participants cp ON m.chat_id = cp.chat_id
+      WHERE m.id = message_reactions.message_id AND cp.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can add reactions to messages in their chats" ON message_reactions
+  FOR INSERT WITH CHECK (
+    auth.uid() = user_id AND
+    EXISTS (
+      SELECT 1 FROM messages m
+      JOIN chat_participants cp ON m.chat_id = cp.chat_id
+      WHERE m.id = message_reactions.message_id AND cp.user_id = auth.uid()
     )
   );
 

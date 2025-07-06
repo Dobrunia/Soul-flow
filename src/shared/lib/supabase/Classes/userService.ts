@@ -43,8 +43,8 @@ export interface ChatBrief {
 export class UserService extends SupabaseCore {
   /** Получить список чатов пользователя, отсортированный по активности */
   async listChats(userId: string): Promise<ChatBrief[]> {
-    /* 1. refresh, чтобы JWT гарантированно был валиден */
-    await this.refresh();
+    /* 1. проверяем токен только при необходимости */
+    await this.ensureValidToken();
 
     /* 2. мои чаты */
     const { data: cps, error: cpErr } = await this.supabase
@@ -148,7 +148,7 @@ export class UserService extends SupabaseCore {
   async searchUsers(query: string, excludeId?: string, limit = 10): Promise<Profile[]> {
     if (!query.trim()) return [];
 
-    await this.refresh();
+    await this.ensureValidToken();
 
     let rq = this.supabase
       .from('profiles')
@@ -165,7 +165,7 @@ export class UserService extends SupabaseCore {
   }
 
   async getProfile(id: string): Promise<Profile | null> {
-    await this.refresh(); // гарантируем валидный JWT
+    await this.ensureValidToken(); // проверяем токен только при необходимости
 
     const { data, error } = await this.supabase.from('profiles').select('*').eq('id', id).single();
 
@@ -174,7 +174,7 @@ export class UserService extends SupabaseCore {
   }
 
   async getMyProfile(): Promise<Profile | null> {
-    await this.refresh(); // гарантируем валидный JWT
+    await this.ensureValidToken(); // проверяем токен только при необходимости
     const user = await this.getCurrentUser();
     const { data, error } = await this.supabase
       .from('profiles')
