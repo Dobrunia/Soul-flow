@@ -16,6 +16,7 @@ import MessageInput from './MessageInput';
 import { chatService, type ChatMessage } from '@/shared/lib/supabase/Classes/chatService';
 import { useSelector } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
+import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
 
 const isUUID = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
@@ -23,21 +24,24 @@ const isUUID = (str: string) =>
 export default function ChatPage() {
   const { chatId: rawChatId } = useParams() as { chatId?: string };
   const me = useSelector(selectProfile);
-
-  /* 1. валидация chatId */
-  if (!rawChatId || !isUUID(rawChatId)) notFound();
-  if (!me) notFound(); // профиль ещё не загружен
-
-  const chatId = rawChatId;
-  const currentUserId = me.id;
+  const { loading: profileLoading } = useSetProfile();
 
   const [accessChecked, setChecked] = useState(false);
   const [messages, setMessages] = useState<MessageProps[]>([]);
   const [chatName, setChatName] = useState<string>('Чат');
   const [loading, setLoading] = useState(true);
 
+  /* 1. валидация chatId */
+  if (!rawChatId || !isUUID(rawChatId)) notFound();
+
+  const chatId = rawChatId;
+
+  const currentUserId = me?.id;
+
   /* ------------ загрузка чата + сообщений ------------ */
   useEffect(() => {
+    if (!currentUserId || profileLoading) return;
+
     (async () => {
       try {
         /* доступ? */
@@ -61,11 +65,11 @@ export default function ChatPage() {
         notFound();
       }
     })();
-  }, [chatId, currentUserId]);
+  }, [chatId, currentUserId, profileLoading]);
 
   /* ------------ отправка / реакция ------------ */
   const handleSendMessage = async (text: string) => {
-    if (!text.trim()) return;
+    if (!text.trim() || !currentUserId) return;
     await chatService.sendMessage(chatId, text);
     // перезагрузить или слушать realtime — упрощённо:
     const msgs = await chatService.listMessages(chatId);
