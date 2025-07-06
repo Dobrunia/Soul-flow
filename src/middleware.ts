@@ -1,62 +1,46 @@
-import { createServerClient } from '@supabase/ssr';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { homePage } from './shared/variables/home.page';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createMiddlewareSupabase } from '@/shared/lib/supabase/middleware';
+import { homePage } from '@/shared/variables/home.page';
 
-// Публичные маршруты (доступны без авторизации)
 const publicRoutes = ['/', '/login', '/register'];
-
-// Защищенные маршруты (требуют авторизации)
 const protectedRoutes = [homePage];
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next({ request });
+  const supabase = createMiddlewareSupabase(request, response);
 
-  // Создаем Supabase клиент прямо здесь
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            res.cookies.set(name, value, options);
-          });
-        },
-      },
-    }
-  );
-
+  /* ← безопасно проверяем токен */
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(); // именно getUser()
 
-  const { pathname } = req.nextUrl;
+  const { pathname } = request.nextUrl;
 
-  // Если маршрут публичный - пропускаем
+  /* ---------- публичные ---------- */
   if (publicRoutes.includes(pathname)) {
-    // Если авторизован и пытается зайти на auth страницы или главную - редирект на chats
-    if (user && ['/login', '/register', '/'].includes(pathname)) {
-      return NextResponse.redirect(new URL(homePage, req.url));
+    if (user) {
+      const url = request.nextUrl.clone();
+      url.pathname = homePage; // авторизован? → внутрь приложения
+      return NextResponse.redirect(url);
     }
-    return res;
+    return response; // не залогинен → пропускаем
   }
 
-  // Если не авторизован и пытается зайти на защищенную страницу
-  if (!user && protectedRoutes.some((route) => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/login', req.url));
+  /* ---------- защищённые ---------- */
+  const isProtected = protectedRoutes.some((p) => pathname.startsWith(p));
+
+  if (!user && isProtected) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url); // гостя отправляем на /login
   }
 
-  // Если авторизован и на защищенной странице - добавляем данные пользователя в headers
-  if (user && protectedRoutes.some((route) => pathname.startsWith(route))) {
-    res.headers.set('x-user-id', user.id);
-    res.headers.set('x-user-email', user.email || '');
+  if (user && isProtected) {
+    response.headers.set('x-user-id', user.id);
+    response.headers.set('x-user-email', user.email ?? '');
   }
 
-  return res;
+  return response;
 }
 
 export const config = {

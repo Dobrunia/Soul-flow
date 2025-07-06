@@ -2,74 +2,69 @@
 
 import { Modal, TextField, Row, LoadingSpinner, Alert, Avatar } from 'dobruniaui';
 import { useEffect, useRef, useState } from 'react';
+
+import { userService } from '@/shared/lib/supabase/Classes/userService';
 import { useSelector } from 'react-redux';
-import { getSupabaseBrowser } from '@/shared/lib/supabase';
-import { selectUser } from '@/shared/store/userSlice';
 
 type Status = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
-interface UsersSearchModalProps {
+const useDebounce = <T,>(v: T, d = 300) => {
+  const [deb, setDeb] = useState(v);
+  useEffect(() => {
+    const t = setTimeout(() => setDeb(v), d);
+    return () => clearTimeout(t);
+  }, [v, d]);
+  return deb;
+};
+
+export default function UsersSearchModal({
+  isOpen,
+  onClose,
+}: {
   isOpen: boolean;
   onClose: () => void;
-}
+}) {
+  /* свой профиль уже в Redux */
+  const meId = useSelector((s: any) => s.profile.id) as string | undefined;
 
-/* debounce ↓ */
-function useDebounce<T>(value: T, delay = 300): T {
-  const [deb, setDeb] = useState(value);
-  useEffect(() => {
-    const id = setTimeout(() => setDeb(value), delay);
-    return () => clearTimeout(id);
-  }, [value, delay]);
-  return deb;
-}
-/* ───────── */
-
-export default function UsersSearchModal({ isOpen, onClose }: UsersSearchModalProps) {
-  const me = useSelector(selectUser); // ← текущий пользователь
   const [query, setQuery] = useState('');
   const q = useDebounce(query.trim(), 300);
 
   const [users, setUsers] = useState<any[]>([]);
   const [status, setStatus] = useState<Status>('idle');
-  const requestId = useRef(0);
+  const reqId = useRef(0); // отменяем устаревшие запросы
 
+  /* поиск */
   useEffect(() => {
     if (!q) {
-      setUsers([]);
       setStatus('idle');
+      setUsers([]);
       return;
     }
 
-    const current = ++requestId.current;
+    const id = ++reqId.current;
     setStatus('loading');
-    const supabase = getSupabaseBrowser();
-    let req = supabase
-      .from('profiles')
-      .select('id, email, username, avatar_url')
-      .ilike('username', `%${q}%`)
-      .limit(10);
 
-    if (me?.id) req = req.neq('id', me.id); // <-- исключаем себя
+    (async () => {
+      try {
+        const data = await userService.searchUsers(q, meId);
 
-    req.then(({ data, error }) => {
-      if (current !== requestId.current) return; // устаревший ответ
-      if (error) {
-        console.error(error);
+        if (id !== reqId.current) return; // пришёл старый ответ
+
+        if (!data.length) {
+          setStatus('empty');
+          setUsers([]);
+        } else {
+          setStatus('success');
+          setUsers(data);
+        }
+      } catch (e) {
+        console.error('[search]', e);
         setStatus('error');
-        setUsers([]);
-        return;
       }
-      if (!data || data.length === 0) {
-        setStatus('empty');
-        setUsers([]);
-      } else {
-        setStatus('success');
-        setUsers(data);
-      }
-    });
-  }, [q, me?.id]);
+    })();
+  }, [q, meId]);
 
-  /* UI ↓ */
   const content = (() => {
     switch (status) {
       case 'loading':
@@ -99,7 +94,7 @@ export default function UsersSearchModal({ isOpen, onClose }: UsersSearchModalPr
           />
         ));
       default:
-        return null; // idle
+        return null;
     }
   })();
 
@@ -114,8 +109,10 @@ export default function UsersSearchModal({ isOpen, onClose }: UsersSearchModalPr
           autoFocus
           autoComplete={false}
         />
-
-        <div className='mt-4 p-2 border-[var(--c-border)] border-2 rounded-[8px] overflow-y-auto min-h-[160px] max-h-[320px] h-[240px]'>
+        <div
+          className='mt-4 p-2 border-[var(--c-border)] border-2 rounded-[8px]
+                     overflow-y-auto min-h-[160px] max-h-[320px] h-[240px]'
+        >
           {content}
         </div>
       </div>

@@ -1,43 +1,70 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import UserActionsMenu from './UserActionsMenu';
+import { Avatar, Skeleton, DESIGN_TOKENS, ActionsMenu, type ActionsMenuAction } from 'dobruniaui';
+
 import { useSelector } from 'react-redux';
-import { selectUser } from '@/shared/store/userSlice';
-import { Avatar, Skeleton, DESIGN_TOKENS } from 'dobruniaui';
+import { auth } from '@/shared/lib/supabase/Classes/authService'; // ← sign-out
+import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
+import { selectProfile } from '@/shared/store/profileSlice';
 
 export default function UserDropdown() {
-  const user = useSelector(selectUser);
+  /* профиль хранится в Redux (положил UserSessionProvider) */
+  const user = useSelector(selectProfile);
+
+  const { loading } = useSetProfile(); // только флаг
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Закрытие при клике вне компонента
+  /* закрываем меню при клике вне */
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+    const outside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setIsOpen(false);
     };
+    if (isOpen) document.addEventListener('mousedown', outside);
+    return () => document.removeEventListener('mousedown', outside);
   }, [isOpen]);
+
+  /* --------- пункт меню «Выйти» --------- */
+  const menuItems: ActionsMenuAction[] = [
+    {
+      label: 'Выйти',
+      icon: (
+        <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+          <path
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            strokeWidth={2}
+            d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
+          />
+        </svg>
+      ),
+      onClick: async () => {
+        try {
+          console.log('Attempting to sign out...');
+          await auth.signOutLocal(); // ← вызов сервиса
+          console.log('Sign out successful');
+        } catch (e) {
+          console.error('Sign out failed', e);
+        } finally {
+          setIsOpen(false);
+        }
+      },
+      type: 'destructive',
+    },
+  ];
 
   return (
     <div className='relative' ref={dropdownRef}>
-      {/* Информация о пользователе - триггер для клика */}
+      {/* триггер */}
       <div
-        className='flex items-center space-x-3 cursor-pointer p-2 rounded-md hover:bg-[var(--c-bg-elevated)] transition-colors'
-        onClick={() => setIsOpen(!isOpen)}
+        className='flex items-center space-x-3 cursor-pointer p-2 rounded-md
+                   hover:bg-[var(--c-bg-elevated)] transition-colors'
+        onClick={() => setIsOpen((o) => !o)}
       >
         {/* Аватар */}
-        {user ? (
-          <Avatar src={user?.avatar_url || ''} name={user?.username || ''} status={user?.status} />
+        {!loading && user ? (
+          <Avatar src={user.avatar_url ?? ''} name={user.username ?? ''} status={user.status} />
         ) : (
           <Skeleton
             variant='circular'
@@ -46,14 +73,12 @@ export default function UserDropdown() {
           />
         )}
 
-        {/* Имя пользователя */}
+        {/* Имя / почта */}
         <div className='flex flex-col'>
-          {user ? (
+          {!loading && user ? (
             <>
-              <span className='text-sm font-medium text-[var(--c-text-primary)]'>
-                {user?.username}
-              </span>
-              <span className='text-xs text-[var(--c-text-secondary)]'>{user?.email}</span>
+              <span className='text-sm font-medium'>{user.username}</span>
+              <span className='text-xs text-[var(--c-text-secondary)]'>{user.email}</span>
             </>
           ) : (
             <>
@@ -63,7 +88,7 @@ export default function UserDropdown() {
           )}
         </div>
 
-        {/* Стрелка */}
+        {/* стрелка */}
         <svg
           className={`w-4 h-4 text-[var(--c-text-secondary)] transition-transform ${
             isOpen ? 'rotate-0' : '-rotate-90'
@@ -76,8 +101,10 @@ export default function UserDropdown() {
         </svg>
       </div>
 
-      {/* Dropdown меню */}
-      {isOpen && <UserActionsMenu onClose={() => setIsOpen(false)} />}
+      {/* dropdown */}
+      {isOpen && (
+        <ActionsMenu items={menuItems} onClose={() => setIsOpen(false)} className='mt-1 w-full!' />
+      )}
     </div>
   );
 }

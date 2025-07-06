@@ -6,7 +6,7 @@ import { initThemeSystem, setTheme } from 'dobruniaui';
 export default function ThemeInitializer() {
   useEffect(() => {
     initThemeSystem();
-    setTheme('obsidian');
+    setTheme('oldmoney');
   }, []);
 
   return null;

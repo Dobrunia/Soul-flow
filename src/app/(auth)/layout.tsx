@@ -1,8 +1,6 @@
-'use client';
-
 import OAuthButtons from '@/app/(auth)/OAuthButtons';
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className='h-[calc(100vh-72px)] flex items-center justify-center py-12 px-4'>
       <div className='max-w-md w-full space-y-6'>

@@ -1,54 +1,39 @@
+'use client';
+
 import { Row, Card } from 'dobruniaui';
 import { FaGoogle, FaGithub, FaTwitch } from 'react-icons/fa';
-import { getSupabaseBrowser } from '@/shared/lib/supabase';
-import { homePage } from '@/shared/variables/home.page';
+import { auth } from '@/shared/lib/supabase/Classes/authService';
 
-const supabase = getSupabaseBrowser();
+const PROVIDERS = [
+  { id: 'google', icon: <FaGoogle />, label: 'Google' },
+  { id: 'github', icon: <FaGithub />, label: 'GitHub' },
+  // { id: 'twitch',  icon: <FaTwitch  />, label: 'Twitch' },
+] as const;
 
 export default function OAuthButtons() {
-  const handleOAuthLogin = async (provider: 'google' | 'github' | 'twitch') => {
-    await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: homePage,
-      },
-    });
+  const handle = async (provider: (typeof PROVIDERS)[number]['id']) => {
+    try {
+      await auth.signInWithOAuth(provider, { redirectTo: '/' });
+    } catch (error) {
+      console.error('OAuth login failed:', error);
+    }
   };
 
   return (
     <Card title='Войти через:' variant='elevated' className='text-center'>
-      <Row
-        center={
-          <div className='w-[82px] flex items-center justify-start gap-3'>
-            <FaGoogle className='text-[var(--c-text-primary)] text-lg' />
-            <span>Google</span>
-          </div>
-        }
-        onClick={() => handleOAuthLogin('google')}
-        className='hover:bg-[var(--c-bg-default)]!'
-      />
-
-      <Row
-        center={
-          <div className='w-[82px] flex items-center justify-start gap-3'>
-            <FaGithub className='text-[var(--c-text-primary)] text-lg' />
-            <span>GitHub</span>
-          </div>
-        }
-        onClick={() => handleOAuthLogin('github')}
-        className='hover:bg-[var(--c-bg-default)]!'
-      />
-
-      {/* <Row
-        center={
-          <div className='w-[80px] flex items-center justify-start gap-3'>
-            <FaTwitch className='text-[var(--c-text-primary)] text-lg' />
-            <span>Twitch</span>
-          </div>
-        }
-        onClick={() => handleOAuthLogin('twitch')}
-        className='hover:bg-[var(--c-bg-default)]!'
-      /> */}
+      {PROVIDERS.map((p) => (
+        <Row
+          key={p.id}
+          center={
+            <div className='w-[90px] flex items-center gap-3'>
+              <span className='text-lg'>{p.icon}</span>
+              <span>{p.label}</span>
+            </div>
+          }
+          onClick={() => handle(p.id)}
+          className='hover:bg-[var(--c-bg-default)]!'
+        />
+      ))}
     </Card>
   );
 }

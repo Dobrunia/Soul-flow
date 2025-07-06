@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { Card, TextField, Button, Alert } from 'dobruniaui';
-import { homePage } from '@/shared/variables/home.page';
+import { validateEmail, validatePassword } from '../validation';
+import { auth } from '@/shared/lib/supabase/Classes/authService';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -14,17 +14,18 @@ export default function LoginPage() {
 
   // Validation states
   const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   // Dynamic validation
   useEffect(() => {
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setEmailError('Введите корректный email');
-    } else {
-      setEmailError('');
-    }
+    setEmailError(email ? validateEmail(email) : '');
   }, [email]);
 
-  const isFormValid = email && password && !emailError;
+  useEffect(() => {
+    setPasswordError(password ? validatePassword(password) : '');
+  }, [password]);
+
+  const isFormValid = email && password && !emailError && !passwordError;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,16 +35,15 @@ export default function LoginPage() {
     const trimmedPassword = password.trim();
 
     // Final validation
-    if (!trimmedEmail) {
-      setError('Email обязателен');
+    const emailErr = validateEmail(trimmedEmail);
+    const passwordErr = validatePassword(trimmedPassword);
+
+    if (emailErr) {
+      setError(emailErr);
       return;
     }
-    if (!trimmedPassword) {
-      setError('Пароль обязателен');
-      return;
-    }
-    if (emailError) {
-      setError('Исправьте ошибки в форме');
+    if (passwordErr) {
+      setError(passwordErr);
       return;
     }
 
@@ -51,18 +51,15 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const supabase = getSupabaseBrowser();
-      const { error } = await supabase.auth.signInWithPassword({
+      const authError = await auth.login({
         email: trimmedEmail,
         password: trimmedPassword,
       });
-
-      if (error) throw error;
-
-      // Принудительная перезагрузка для обновления состояния и активации middleware
-      window.location.href = homePage;
+      if (authError) {
+        setError(authError.message);
+      }
     } catch (error: any) {
-      setError(error.message);
+      setError(error.message || 'Произошла ошибка при входе');
     } finally {
       setLoading(false);
     }
@@ -99,7 +96,8 @@ export default function LoginPage() {
           type='password'
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          helperText='Введите пароль'
+          helperText={passwordError || 'Введите пароль'}
+          error={!!passwordError}
           required
         />
 

@@ -2,11 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getSupabaseBrowser } from '@/shared/lib/supabase';
 import { Card, TextField, Button, Alert } from 'dobruniaui';
-import { homePage } from '@/shared/variables/home.page';
-
-const supabase = getSupabaseBrowser();
+import { validateEmail, validatePassword, validateConfirmPassword } from '../validation';
+import { auth } from '@/shared/lib/supabase/Classes/authService';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -23,30 +21,17 @@ export default function RegisterPage() {
 
   // Dynamic validation
   useEffect(() => {
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setEmailError('Введите корректный email');
-    } else {
-      setEmailError('');
-    }
+    setEmailError(email ? validateEmail(email) : '');
   }, [email]);
 
   useEffect(() => {
-    const trimmedPassword = password.trim();
-    if (password && trimmedPassword.length < 6) {
-      setPasswordError('Пароль должен содержать минимум 6 символов');
-    } else {
-      setPasswordError('');
-    }
+    setPasswordError(password ? validatePassword(password) : '');
   }, [password]);
 
   useEffect(() => {
-    const trimmedPassword = password.trim();
-    const trimmedConfirmPassword = confirmPassword.trim();
-    if (confirmPassword && trimmedPassword !== trimmedConfirmPassword) {
-      setConfirmPasswordError('Пароли не совпадают');
-    } else {
-      setConfirmPasswordError('');
-    }
+    setConfirmPasswordError(
+      confirmPassword ? validateConfirmPassword(password, confirmPassword) : ''
+    );
   }, [password, confirmPassword]);
 
   const isFormValid =
@@ -61,20 +46,20 @@ export default function RegisterPage() {
     const trimmedConfirmPassword = confirmPassword.trim();
 
     // Final validation
-    if (!trimmedEmail) {
-      setError('Email обязателен');
+    const emailErr = validateEmail(trimmedEmail);
+    const passwordErr = validatePassword(trimmedPassword);
+    const confirmPasswordErr = validateConfirmPassword(trimmedPassword, trimmedConfirmPassword);
+
+    if (emailErr) {
+      setError(emailErr);
       return;
     }
-    if (!trimmedPassword) {
-      setError('Пароль обязателен');
+    if (passwordErr) {
+      setError(passwordErr);
       return;
     }
-    if (!trimmedConfirmPassword) {
-      setError('Подтверждение пароля обязательно');
-      return;
-    }
-    if (emailError || passwordError || confirmPasswordError) {
-      setError('Исправьте ошибки в форме');
+    if (confirmPasswordErr) {
+      setError(confirmPasswordErr);
       return;
     }
 
@@ -83,39 +68,17 @@ export default function RegisterPage() {
     setMessage('');
 
     try {
-      console.log('Attempting registration for:', trimmedEmail);
-
-      const { data, error } = await supabase.auth.signUp({
+      const authError = await auth.signup({
         email: trimmedEmail,
         password: trimmedPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/chats`,
-        },
       });
-
-      if (error) {
-        console.error('Supabase registration error:', error);
-        setError(`Ошибка регистрации: ${error.message}`);
-        return;
+      if (authError) {
+        setError(authError.message);
+      } else {
+        setMessage('Регистрация успешна! Проверьте email для подтверждения.');
       }
-
-      // В новых версиях Supabase signUp всегда возвращает успех,
-      // но для существующих пользователей не создает новую сессию
-      if (!data.session && data.user && data.user.identities && data.user.identities.length === 0) {
-        setError('Пользователь с таким email уже зарегистрирован');
-        return;
-      }
-
-      // Если создалась сессия - перенаправляем
-      if (data.session) {
-        console.log('Registration successful:', data.user);
-        window.location.href = homePage;
-        return;
-      }
-
-      setMessage('Проверьте email для подтверждения регистрации');
     } catch (error: any) {
-      setError(error.message);
+      setError(error.message || 'Произошла ошибка при регистрации');
     } finally {
       setLoading(false);
     }

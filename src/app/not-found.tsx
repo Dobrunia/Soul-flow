@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { homePage } from '@/shared/variables/home.page';
 
 // Принудительно делаем страницу статической
 // export const dynamic = 'force-static';
@@ -18,7 +19,7 @@ export default function NotFound() {
         </div>
 
         <div className='space-y-3'>
-          <Link href='/' className='block'>
+          <Link href={homePage} className='block'>
             <button className='w-full px-4 py-2 rounded-lg transition-colors hover:opacity-90 bg-[var(--c-accent)] text-[var(--c-text-inverse)] cursor-pointer'>
               На главную
             </button>
