@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, TextField, Button, Alert } from 'dobruniaui';
 import { validateEmail, validatePassword } from '../validation';
 import { auth } from '@/shared/lib/supabase/Classes/authService';
+import { homePage } from '@/shared/variables/home.page';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,6 +60,8 @@ export default function LoginPage() {
       });
       if (authError) {
         setError(authError.message);
+      } else {
+        router.push(homePage);
       }
     } catch (error: any) {
       setError(error.message || 'Произошла ошибка при входе');

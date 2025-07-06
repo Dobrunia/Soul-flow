@@ -7,11 +7,12 @@ import { useSelector } from 'react-redux';
 import { auth } from '@/shared/lib/supabase/Classes/authService'; // ← sign-out
 import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
 import { selectProfile } from '@/shared/store/profileSlice';
+import { useRouter } from 'next/navigation';
 
 export default function UserDropdown() {
   /* профиль хранится в Redux (положил UserSessionProvider) */
   const user = useSelector(selectProfile);
-
+  const router = useRouter();
   const { loading } = useSetProfile(); // только флаг
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -44,6 +45,7 @@ export default function UserDropdown() {
           console.log('Attempting to sign out...');
           await auth.signOutLocal(); // ← вызов сервиса
           console.log('Sign out successful');
+          router.push('/login');
         } catch (e) {
           console.error('Sign out failed', e);
         } finally {

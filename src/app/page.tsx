@@ -5,7 +5,6 @@ import { Button, Card } from 'dobruniaui';
 import { homePage } from '@/shared/variables/home.page';
 
 export default function Home() {
-  // Если пользователь не авторизован
   return (
     <div className='min-h-screen flex items-center justify-center p-4'>
       <Card variant='elevated' className='text-center max-w-md w-full bg-[var(--c-bg-subtle)]'>
