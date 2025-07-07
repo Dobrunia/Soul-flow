@@ -1,4 +1,3 @@
-// shared/api/supabaseCore.ts
 import {
   type SupabaseClient,
   type AuthError,
