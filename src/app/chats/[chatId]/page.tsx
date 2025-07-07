@@ -32,6 +32,10 @@ export default function ChatPage() {
   const [chatName, setChatName] = useState<string>('Чат');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatAvatar, setChatAvatar] = useState<string | null>(null);
+  const [chatStatus, setChatStatus] = useState<'online' | 'offline' | 'dnd' | 'invisible'>(
+    'offline'
+  );
 
   /* 1. валидация chatId */
   if (!rawChatId || !isUUID(rawChatId)) notFound();
@@ -76,6 +80,16 @@ export default function ChatPage() {
           return;
         }
         setChatName(chat.name);
+
+        // Для direct чата подтягиваем аватар и статус собеседника
+        if (chat.type === 'direct' && chat.participants) {
+          const other = chat.participants.find((p) => p.id !== currentUserId);
+          setChatAvatar(other?.avatar_url ?? null);
+          setChatStatus((other?.status as any) ?? 'offline');
+        } else {
+          setChatAvatar(null);
+          setChatStatus('offline');
+        }
 
         /* сообщения */
         await loadMessages();
@@ -131,7 +145,15 @@ export default function ChatPage() {
     <div className='flex flex-col bg-[var(--c-bg-default)] h-full'>
       {/* шапка */}
       <Row
-        left={<Avatar name={chatName} size='md' status='online' showStatus />}
+        left={
+          <Avatar
+            name={chatName}
+            src={chatAvatar || undefined}
+            size='md'
+            status={chatStatus}
+            showStatus
+          />
+        }
         center={<h2 className='font-medium'>{chatName}</h2>}
         className='bg-[var(--c-bg-subtle)] border-b border-[var(--c-border)]'
         centerJustify='left'

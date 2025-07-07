@@ -11,6 +11,7 @@ export interface ChatData {
     id: string;
     username: string | null;
     avatar_url: string | null;
+    status: Presence;
   }[];
 }
 
@@ -137,7 +138,8 @@ export class ChatService extends SupabaseCore {
         profiles:user_id (
           id,
           username,
-          avatar_url
+          avatar_url,
+          status
         )
       `
       )
