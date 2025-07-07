@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS chats (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   type TEXT CHECK (type IN ('direct', 'group')) NOT NULL DEFAULT 'direct',
-  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  created_by UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -81,6 +81,9 @@ CREATE POLICY "Users can view chats they participate in" ON chats
       WHERE chat_id = chats.id AND user_id = auth.uid()
     )
   );
+
+CREATE POLICY "Chat creator can view own chat" ON chats
+  FOR SELECT USING (created_by = auth.uid());
 
 CREATE POLICY "Users can create chats" ON chats
   FOR INSERT WITH CHECK (auth.uid() = created_by);
@@ -152,6 +155,13 @@ CREATE POLICY "Users can add reactions to messages in their chats" ON message_re
       WHERE m.id = message_reactions.message_id AND cp.user_id = auth.uid()
     )
   );
+
+-- Даем права authenticated пользователям
+GRANT INSERT, SELECT, UPDATE, DELETE ON chats TO authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON profiles TO authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON chat_participants TO authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON messages TO authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON message_reactions TO authenticated;
 
 -- Функция для автоматического создания профиля при регистрации
 CREATE OR REPLACE FUNCTION public.handle_new_user()

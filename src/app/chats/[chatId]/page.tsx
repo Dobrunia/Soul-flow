@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Message,
   MessageContainer,
@@ -17,6 +17,7 @@ import { chatService, type ChatMessage } from '@/shared/lib/supabase/Classes/cha
 import { useSelector } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
 import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
+import { useChatMessagesSubscription } from '@/shared/lib/supabase/Classes/ws/hooks';
 
 const isUUID = (str: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
@@ -30,6 +31,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<MessageProps[]>([]);
   const [chatName, setChatName] = useState<string>('Чат');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   /* 1. валидация chatId */
   if (!rawChatId || !isUUID(rawChatId)) notFound();
@@ -38,42 +40,64 @@ export default function ChatPage() {
 
   const currentUserId = me?.id;
 
+  /* функция загрузки сообщений */
+  const loadMessages = useCallback(async () => {
+    if (!currentUserId) return;
+    try {
+      const msgs = await chatService.listMessages(chatId);
+      const formatted: MessageProps[] = msgs.map(toMessageProps(currentUserId));
+      setMessages(formatted);
+    } catch (e) {
+      console.error('Error loading messages:', e);
+    }
+  }, [chatId, currentUserId]);
+
   /* ------------ загрузка чата + сообщений ------------ */
   useEffect(() => {
     if (!currentUserId || profileLoading) return;
 
     (async () => {
       try {
+        setError(null);
+
         /* доступ? */
         const ok = await chatService.hasAccess(chatId, currentUserId);
-        if (!ok) notFound();
+        if (!ok) {
+          setError('У вас нет доступа к этому чату');
+          setLoading(false);
+          return;
+        }
 
         /* инфо о чате */
-        const chat = await chatService.getChat(chatId);
-        if (!chat) notFound();
+        const chat = await chatService.getChatWithParticipants(chatId);
+        if (!chat) {
+          setError('Чат не найден');
+          setLoading(false);
+          return;
+        }
         setChatName(chat.name);
 
         /* сообщения */
-        const msgs = await chatService.listMessages(chatId);
-        const formatted: MessageProps[] = msgs.map(toMessageProps(currentUserId));
-        setMessages(formatted);
+        await loadMessages();
 
         setChecked(true);
         setLoading(false);
       } catch (e) {
         console.error(e);
-        notFound();
+        setError('Ошибка загрузки чата');
+        setLoading(false);
       }
     })();
-  }, [chatId, currentUserId, profileLoading]);
+  }, [chatId, currentUserId, profileLoading, loadMessages]);
+
+  /* WebSocket подписка на новые сообщения */
+  useChatMessagesSubscription(chatId, loadMessages, accessChecked);
 
   /* ------------ отправка / реакция ------------ */
   const handleSendMessage = async (text: string) => {
     if (!text.trim() || !currentUserId) return;
     await chatService.sendMessage(chatId, text);
-    // перезагрузить или слушать realtime — упрощённо:
-    const msgs = await chatService.listMessages(chatId);
-    setMessages(msgs.map(toMessageProps(currentUserId)));
+    // Сообщения обновятся автоматически через WebSocket
   };
 
   const handleReaction = async (emoji: string, msgId: string) => {
@@ -81,10 +105,25 @@ export default function ChatPage() {
   };
 
   /* ------------ UI ------------ */
-  if (!accessChecked || loading)
+  if (loading && !error)
     return (
       <div className='flex-1 flex items-center justify-center'>
         <LoadingSpinner size='large' />
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className='flex-1 flex items-center justify-center'>
+        <div className='text-center text-[var(--c-text-secondary)]'>
+          <p className='text-lg mb-2'>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className='text-[var(--c-accent)] hover:underline'
+          >
+            Попробовать снова
+          </button>
+        </div>
       </div>
     );
 

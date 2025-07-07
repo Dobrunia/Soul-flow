@@ -1,9 +1,11 @@
 'use client';
 
-import { Modal, TextField, Row, LoadingSpinner, Alert, Avatar } from 'dobruniaui';
+import { Modal, TextField, Row, LoadingSpinner, Alert, Avatar, Button } from 'dobruniaui';
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import { userService } from '@/shared/lib/supabase/Classes/userService';
+import { chatService } from '@/shared/lib/supabase/Classes/chatService';
 import { useSelector } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
 
@@ -25,6 +27,7 @@ export default function UsersSearchModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
   /* свой профиль уже в Redux */
   const meId = useSelector(selectProfile)?.id;
 
@@ -33,6 +36,7 @@ export default function UsersSearchModal({
 
   const [users, setUsers] = useState<any[]>([]);
   const [status, setStatus] = useState<Status>('idle');
+  const [creatingChatFor, setCreatingChatFor] = useState<string | null>(null);
   const reqId = useRef(0); // отменяем устаревшие запросы
 
   /* поиск */
@@ -66,6 +70,23 @@ export default function UsersSearchModal({
     })();
   }, [q, meId]);
 
+  /* создание чата */
+  const createChat = async (userId: string) => {
+    if (!meId) return;
+
+    setCreatingChatFor(userId);
+    try {
+      const chatId = await chatService.createDirectChat(userId);
+      onClose(); // закрываем модалку
+      router.push(`/chats/${chatId}`); // переходим в чат
+    } catch (e) {
+      console.error('[createChat]', e);
+      // TODO: показать ошибку пользователю
+    } finally {
+      setCreatingChatFor(null);
+    }
+  };
+
   const content = (() => {
     switch (status) {
       case 'loading':
@@ -82,20 +103,23 @@ export default function UsersSearchModal({
         return users.map((u) => (
           <Row
             key={u.id}
-            left={
-              <Avatar
-                src={u.avatar_url}
-                name={u.username}
-                size='sm'
-              />
-            }
+            left={<Avatar src={u.avatar_url} name={u.username} size='sm' />}
             center={
               <div>
                 <div className='font-medium'>{u.username}</div>
                 <div className='text-xs text-[var(--c-text-secondary)]'>{u.email}</div>
               </div>
             }
-            onClick={() => console.log(u)}
+            right={
+              <Button
+                variant='primary'
+                size='small'
+                onClick={() => createChat(u.id)}
+                disabled={creatingChatFor === u.id}
+              >
+                {creatingChatFor === u.id ? <LoadingSpinner size='small' /> : 'Чат'}
+              </Button>
+            }
             centerJustify='left'
             className='rounded-[8px]'
           />

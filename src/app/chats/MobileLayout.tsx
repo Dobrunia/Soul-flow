@@ -1,9 +1,8 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import ChatList from '../../widgets/ChatListBlock/ChatList/ChatList';
-import MyChatsSearchInput from '../../widgets/ChatListBlock/SearchBlock/MyChatsSearchInput';
 import BackButton from './BackButton';
+import ChatListBlock from '@/widgets/ChatListBlock/ChatListBlock';
 
 interface MobileLayoutProps {
   children: React.ReactNode;
@@ -19,11 +18,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       {!isInChat ? (
         /* Мобильный список чатов */
         <div className='flex flex-col w-full h-full bg-[var(--c-bg-subtle)]'>
-          {/* Поиск по чатам */}
-          <MyChatsSearchInput />
-
-          {/* Список чатов */}
-          <ChatList />
+          <ChatListBlock />
         </div>
       ) : (
         /* Мобильный чат с кнопкой назад */

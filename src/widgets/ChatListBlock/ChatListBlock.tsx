@@ -9,6 +9,7 @@ import { userService, type ChatBrief } from '@/shared/lib/supabase/Classes/userS
 import { selectProfile } from '@/shared/store/profileSlice';
 import MyChatsSearchInput from './SearchBlock/MyChatsSearchInput';
 import ChatListComponent from './ChatList/ChatList';
+import { useUserChatsSubscription } from '@/shared/lib/supabase/Classes/ws/hooks';
 
 /* -------- утилита: ChatBrief ➜ ChatListItem -------- */
 const toListItem = ({ _t, ...rest }: any): ChatListItem => rest as ChatListItem;
@@ -51,6 +52,9 @@ export default function ChatListBlock() {
     };
   }, [loadChats]);
 
+  /* WebSocket подписка на изменения чатов */
+  useUserChatsSubscription(meId, loadChats);
+
   /* фильтрация чатов по поисковому запросу */
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -65,7 +69,7 @@ export default function ChatListBlock() {
   }, [searchQuery, allItems]);
 
   return (
-    <div className='w-80 flex flex-col bg-[var(--c-bg-subtle)]'>
+    <div className='md:w-80 flex flex-col bg-[var(--c-bg-subtle)] w-full'>
       {/* Поиск по чатам */}
       <MyChatsSearchInput searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
