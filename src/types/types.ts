@@ -58,29 +58,3 @@ export interface MessageReaction {
   emoji: string; // TEXT NOT NULL
   created_at: string; // TIMESTAMPTZ NOT NULL
 }
-
-/* =======================================================================
-   DTO / View-модели для фронта
-   ────────────────────────────────────────────────────────────────────── */
-
-/** Краткая карточка чата в списке */
-export interface ChatBrief {
-  id: string;
-  name: string;
-  avatar_url?: string | null;
-  lastMessage: string;
-  time: string; // формат HH:MM
-  status: Presence; // из dobunriaui
-  messageStatus: MessageStatus | null;
-  isOutgoing: boolean;
-}
-
-/** Подробный чат с участниками */
-export interface ChatData extends Chat {
-  participants: Array<Pick<Profile, 'id' | 'username' | 'avatar_url' | 'status'>>;
-}
-
-/** Сообщение + информация об отправителе */
-export interface ChatMessage extends Message {
-  sender?: Pick<Profile, 'id' | 'username' | 'avatar_url' | 'status'>;
-}

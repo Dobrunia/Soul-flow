@@ -1,245 +1,239 @@
 import { SupabaseCore } from './supabaseCore';
-import type { Presence } from 'dobruniaui';
-
-/* ---------------- модели, которые понадобятся UI ---------------- */
-
-export interface ChatData {
-  id: string;
-  name: string;
-  type: 'direct' | 'group';
-  participants?: {
-    id: string;
-    username: string | null;
-    avatar_url: string | null;
-    status: Presence;
-  }[];
-}
-
-export interface ChatMessage {
-  id: string;
-  chat_id: string;
-  sender_id: string;
-  created_at: string;
-  content: string;
-  status: 'error' | 'unread' | 'read';
-  sender?: {
-    id: string;
-    username: string | null;
-    avatar_url: string | null;
-    status: Presence;
-  };
-}
-
-/* ---------------- сервис ---------------- */
+import type { Chat, Message, Profile } from '@/types/types';
 
 export class ChatService extends SupabaseCore {
-  /** Проверка, является ли пользователь участником чата */
+  /** Проверить, имеет ли юзер доступ к чату */
   async hasAccess(chatId: string, userId: string): Promise<boolean> {
-    const { data, error } = await this.supabase
+    const { error, count } = await this.supabase
       .from('chat_participants')
-      .select('id')
+      .select('id', { head: true, count: 'exact' })
       .eq('chat_id', chatId)
-      .eq('user_id', userId)
-      .single();
-
-    return !error && !!data;
+      .eq('user_id', userId);
+    return !error && (count ?? 0) > 0;
   }
 
-  /** Создать личный чат между двумя пользователями */
+  /** Создать или вернуть существующий direct-чат */
   async createDirectChat(otherUserId: string): Promise<string> {
     await this.ensureValidToken();
-
     const user = await this.getCurrentUser();
-    if (!user) throw new Error('User not authenticated');
+    if (!user) throw new Error('Не авторизован');
 
-    // Ищем существующий личный чат между пользователями
+    // Ищем существующие direct-чаты
     const { data: myChats } = await this.supabase
       .from('chat_participants')
-      .select(
-        `
-        chat_id,
-        chats!inner (id, type)
-      `
-      )
+      .select('chat_id, chats!inner(type)')
       .eq('user_id', user.id)
       .eq('chats.type', 'direct');
 
     if (myChats) {
-      // Проверяем каждый мой direct чат - есть ли в нем второй пользователь
-      for (const myChat of myChats) {
-        const { data: otherParticipant } = await this.supabase
+      for (const { chat_id } of myChats) {
+        const { error, count } = await this.supabase
           .from('chat_participants')
-          .select('id')
-          .eq('chat_id', myChat.chat_id)
-          .eq('user_id', otherUserId)
-          .maybeSingle();
-
-        if (otherParticipant) {
-          return myChat.chat_id; // Чат уже существует
-        }
+          .select('id', { head: true, count: 'exact' })
+          .eq('chat_id', chat_id)
+          .eq('user_id', otherUserId);
+        if (!error && (count ?? 0) > 0) return chat_id;
       }
     }
 
-    // Создаем новый чат
-    const { data: newChat, error: chatError } = await this.supabase
+    // Создаём новый чат
+    const { data: insertedChats, error: chatErr } = await this.supabase
       .from('chats')
       .insert({
         type: 'direct',
-        name: '', // Для личных чатов имя не нужно
-        created_by: user.id, // Обязательно для RLS политики
+        name: '',
+        created_by: user.id,
       })
-      .select('id')
-      .single();
-
-    if (chatError) throw chatError;
+      .select('id');
+    if (chatErr || !insertedChats || insertedChats.length === 0) {
+      throw chatErr ?? new Error('Не удалось создать чат');
+    }
+    const newChat = insertedChats[0];
 
     // Добавляем участников
-    const { error: participantsError } = await this.supabase.from('chat_participants').insert([
+    const { error: partErr } = await this.supabase.from('chat_participants').insert([
       { chat_id: newChat.id, user_id: user.id },
       { chat_id: newChat.id, user_id: otherUserId },
     ]);
-
-    if (participantsError) throw participantsError;
+    if (partErr) throw partErr;
 
     return newChat.id;
   }
 
-  /** Информация о чате (id, name, type) */
-  async getChat(chatId: string): Promise<ChatData | null> {
-    const { data, error } = await this.supabase
-      .from('chats')
-      .select('id, name, type')
-      .eq('id', chatId)
-      .single();
-
+  /** Базовая информация о чате */
+  async getChat(chatId: string): Promise<Chat | null> {
+    const { data, error } = await this.supabase.from('chats').select('*').eq('id', chatId).single();
     if (error) throw error;
     return data;
   }
 
-  /** Информация о чате с участниками (для direct чатов показываем имя собеседника) */
-  async getChatWithParticipants(chatId: string): Promise<ChatData | null> {
+  /** Данные чата вместе с профилями участников */
+  async getChatWithParticipants(
+    chatId: string
+  ): Promise<(Chat & { participants: Profile[] }) | null> {
     const user = await this.getCurrentUser();
-    if (!user) throw new Error('User not authenticated');
+    if (!user) throw new Error('Не авторизован');
 
-    // Получаем информацию о чате
-    const { data: chat, error: chatError } = await this.supabase
+    // 1) Сам чат
+    const { data: chat, error: cErr } = await this.supabase
       .from('chats')
-      .select('id, name, type')
+      .select('*')
       .eq('id', chatId)
       .single();
+    if (cErr || !chat) throw cErr ?? new Error('Чат не найден');
 
-    if (chatError) throw chatError;
-
-    // Получаем участников
-    const { data: participants, error: participantsError } = await this.supabase
+    // 2) Профили участников
+    const { data: parts, error: pErr } = await this.supabase
       .from('chat_participants')
-      .select(
-        `
-        profiles:user_id (
-          id,
-          username,
-          avatar_url,
-          status
-        )
-      `
-      )
+      .select('*')
       .eq('chat_id', chatId);
+    if (pErr) throw pErr;
 
-    if (participantsError) throw participantsError;
+    // parts.profiles может быть: undefined | Profile | Profile[]
+    const participants: Profile[] = parts.flatMap((r: any) => {
+      const p = r.profiles as any;
+      if (!p) return [];
+      return Array.isArray(p) ? p : [p];
+    });
 
-    const participantsList = participants
-      ?.map((p) => p.profiles)
-      .filter(Boolean)
-      .flat();
-
-    // Для direct чатов используем имя собеседника
-    if (chat.type === 'direct' && participantsList) {
-      const otherUser = participantsList.find((p) => p.id !== user.id);
-      if (otherUser) {
-        chat.name = otherUser.username || 'Неизвестный пользователь';
-      }
+    // Для direct-чата — подставляем имя второго участника
+    if (chat.type === 'direct') {
+      const other = participants.find((p) => p && p.id !== user.id);
+      if (other) chat.name = other.username ?? chat.name;
     }
 
+    return { ...chat, participants };
+  }
+
+  /**
+   * 1) Получить одно (последнее) сообщение вместе с профилем отправителя
+   */
+  async getLastMessage(chatId: string): Promise<(Message & { sender?: Profile }) | null> {
+    await this.ensureValidToken();
+
+    const resp = await this.supabase
+      .from('messages')
+      .select('*, profiles:sender_id(id, username, avatar_url, status)')
+      .eq('chat_id', chatId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(); // ← без дженериков
+
+    if (resp.error) throw resp.error;
+    const row = resp.data;
+    if (!row) return null;
+
+    // Явно приводим к нужному типу
+    const m = row as Message & { profiles?: Profile[] };
     return {
-      ...chat,
-      participants: participantsList,
+      id: m.id,
+      chat_id: m.chat_id,
+      sender_id: m.sender_id,
+      content: m.content,
+      message_type: m.message_type,
+      status: m.status,
+      created_at: m.created_at,
+      updated_at: m.updated_at,
+      sender: m.profiles?.[0],
     };
   }
 
-  /** Список сообщений + данные отправителя */
-  async listMessages(chatId: string): Promise<ChatMessage[]> {
-    const { data, error } = await this.supabase
+  /**
+   * 2) Получить последние N сообщений вместе с профилями отправителей
+   */
+  async listRecentMessages(
+    chatId: string,
+    limit = 10
+  ): Promise<Array<Message & { sender?: Profile }>> {
+    await this.ensureValidToken();
+
+    const resp = await this.supabase
       .from('messages')
-      .select(
-        `
-          id,
-          chat_id,
-          content,
-          created_at,
-          sender_id,
-          status,
-          profiles:sender_id ( username, avatar_url, status )
-        `
-      )
+      .select('*, profiles:sender_id(id, username, avatar_url, status)')
       .eq('chat_id', chatId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: false })
+      .limit(limit); // ← тоже только один аргумент
 
-    if (error) throw error;
+    if (resp.error) throw resp.error;
+    const rows = (resp.data ?? []) as Array<Message & { profiles?: Profile[] }>;
 
-    return (
-      data?.map((m) => ({
-        id: m.id,
-        chat_id: m.chat_id,
-        sender_id: m.sender_id,
-        created_at: m.created_at,
-        content: m.content,
-        status: m.status,
-        sender:
-          m.profiles && m.profiles.length > 0
-            ? {
-                id: m.sender_id,
-                username: m.profiles[0].username,
-                avatar_url: m.profiles[0].avatar_url,
-                status: (m.profiles[0].status as Presence) || 'offline',
-              }
-            : undefined,
-      })) ?? []
-    );
+    return rows.map((m) => ({
+      id: m.id,
+      chat_id: m.chat_id,
+      sender_id: m.sender_id,
+      content: m.content,
+      message_type: m.message_type,
+      status: m.status,
+      created_at: m.created_at,
+      updated_at: m.updated_at,
+      sender: m.profiles?.[0],
+    }));
   }
 
-  /** Отправить текстовое сообщение */
+  /**
+   * Получить список чатов пользователя, отсортированный по активности,
+   * и для каждого — только последнее сообщение с данными отправителя
+   */
+  async listUserChatsWithLastMessage(
+    userId: string
+  ): Promise<Array<Chat & { lastMessage?: Message & { sender?: Profile } }>> {
+    // 1) Убедиться, что токен валиден
+    await this.ensureValidToken();
+
+    // 2) Получить все chat_id, в которых участвует пользователь
+    const { data: cps, error: cpErr } = await this.supabase
+      .from('chat_participants')
+      .select('chat_id')
+      .eq('user_id', userId);
+    if (cpErr) throw cpErr;
+    const chatIds = cps?.map((r) => r.chat_id) || [];
+    if (chatIds.length === 0) return [];
+
+    // 3) Забрать сами чаты, сортируя по updated_at (т.о. по активности)
+    const { data: chats, error: chatErr } = await this.supabase
+      .from('chats')
+      .select('*')
+      .in('id', chatIds)
+      .order('updated_at', { ascending: false });
+    if (chatErr) throw chatErr;
+
+    // 4) Для каждого чата получить только его последнее сообщение
+    const result = await Promise.all(
+      (chats || []).map(async (chat) => {
+        const last = await this.getLastMessage(chat.id);
+        return {
+          ...chat,
+          lastMessage: last ?? undefined,
+        };
+      })
+    );
+
+    return result;
+  }
+
+  /** Отправить сообщение */
   async sendMessage(chatId: string, content: string): Promise<void> {
     await this.ensureValidToken();
-
     const user = await this.getCurrentUser();
-    if (!user) throw new Error('User not authenticated');
+    if (!user) throw new Error('Не авторизован');
 
-    const { error } = await this.supabase.from('messages').insert({
-      chat_id: chatId,
-      sender_id: user.id,
-      content,
-      status: 'unread',
-    });
-
+    const { error } = await this.supabase
+      .from('messages')
+      .insert({ chat_id: chatId, sender_id: user.id, content, status: 'unread' });
     if (error) throw error;
   }
 
-  /** Добавить реакцию (emoji) к сообщению */
+  /** Добавить реакцию к сообщению */
   async addReaction(messageId: string, emoji: string): Promise<void> {
     await this.ensureValidToken();
-
     const user = await this.getCurrentUser();
-    if (!user) throw new Error('User not authenticated');
+    if (!user) throw new Error('Не авторизован');
 
-    const { error } = await this.supabase.from('message_reactions').insert({
-      message_id: messageId,
-      user_id: user.id,
-      emoji,
-    });
-
+    const { error } = await this.supabase
+      .from('message_reactions')
+      .insert({ message_id: messageId, user_id: user.id, emoji });
     if (error) throw error;
   }
 }
 
-/* “Боевой” singleton-экземпляр */
 export const chatService = new ChatService();

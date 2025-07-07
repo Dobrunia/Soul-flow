@@ -13,7 +13,10 @@ import {
 
 import MessageInput from './MessageInput';
 
-import { chatService, type ChatMessage } from '@/shared/lib/supabase/Classes/chatService';
+import { chatService } from '@/shared/lib/supabase/Classes/chatService';
+import type { Message as DBMessage, Profile } from '@/types/types';
+// Локальный alias с учётом поля sender
+type ChatMessage = DBMessage & { sender?: Profile };
 import { useSelector } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
 import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
@@ -48,8 +51,9 @@ export default function ChatPage() {
   const loadMessages = useCallback(async () => {
     if (!currentUserId) return;
     try {
-      const msgs = await chatService.listMessages(chatId);
-      const formatted: MessageProps[] = msgs.map(toMessageProps(currentUserId));
+      // Получаем последние ~10 сообщений, разворачиваем в хронологический порядок
+      const msgs = await chatService.listRecentMessages(chatId, 10);
+      const formatted: MessageProps[] = [...msgs].reverse().map(toMessageProps(currentUserId));
       setMessages(formatted);
     } catch (e) {
       console.error('Error loading messages:', e);

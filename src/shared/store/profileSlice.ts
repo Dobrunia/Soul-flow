@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './index';
-import type { Profile } from '@/shared/lib/supabase/Classes/userService'; // ваш интерфейс
+import type { Profile } from '@/types/types';
 
 interface ProfileState {
   profile: Profile | null;

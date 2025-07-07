@@ -5,14 +5,25 @@ import { type ChatListItem } from 'dobruniaui';
 import { useCallback, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 
-import { userService, type ChatBrief } from '@/shared/lib/supabase/Classes/userService';
+import { chatService } from '@/shared/lib/supabase/Classes/chatService';
 import { selectProfile } from '@/shared/store/profileSlice';
 import MyChatsSearchInput from './SearchBlock/MyChatsSearchInput';
 import ChatListComponent from './ChatList/ChatList';
 import { useUserChatsSubscription } from '@/shared/lib/supabase/Classes/ws/hooks';
 
-/* -------- утилита: ChatBrief ➜ ChatListItem -------- */
-const toListItem = ({ _t, ...rest }: any): ChatListItem => rest as ChatListItem;
+/* -------- утилита: Chat & lastMessage ➜ ChatListItem -------- */
+const toListItem = (chat: any): ChatListItem => ({
+  id: chat.id,
+  name: chat.name || 'Чат',
+  lastMessage: chat.lastMessage?.content ?? '',
+  time: new Date(chat.updated_at ?? chat.lastMessage?.created_at ?? Date.now()).toLocaleTimeString(
+    'ru-RU',
+    {
+      hour: '2-digit',
+      minute: '2-digit',
+    }
+  ),
+});
 
 export default function ChatListBlock() {
   /* берём id из Redux через селектор (null-safe) */
@@ -31,7 +42,7 @@ export default function ChatListBlock() {
     setError(null);
 
     try {
-      const list: ChatBrief[] = await userService.listChats(meId);
+      const list = await chatService.listUserChatsWithLastMessage(meId);
       console.log('listChats result:', list);
       if (!cancelled.current) {
         const items = list.map(toListItem);
