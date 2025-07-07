@@ -222,4 +222,28 @@ CREATE TRIGGER handle_updated_at BEFORE UPDATE ON chats
 
 CREATE TRIGGER handle_updated_at BEFORE UPDATE ON messages
   FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
-  
+
+-- Добавляем таблицы в публикацию supabase_realtime (безопасно)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'chat_participants'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE chat_participants;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'chats'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE chats;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'profiles'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
+  END IF;
+END $$;  

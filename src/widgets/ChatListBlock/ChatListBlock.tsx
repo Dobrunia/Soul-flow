@@ -22,6 +22,7 @@ export default function ChatListBlock() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const cancelled = useRef(false); // отмена setState после unmount
 
   const loadChats = useCallback(async () => {
@@ -31,9 +32,12 @@ export default function ChatListBlock() {
 
     try {
       const list: ChatBrief[] = await userService.listChats(meId);
+      console.log('listChats result:', list);
       if (!cancelled.current) {
         const items = list.map(toListItem);
+        console.log('mapped items:', items);
         setAllItems(items);
+        setInitialLoaded(true);
       }
     } catch (e) {
       console.error(e);
@@ -53,20 +57,30 @@ export default function ChatListBlock() {
   }, [loadChats]);
 
   /* WebSocket подписка на изменения чатов */
-  useUserChatsSubscription(meId, loadChats);
+  useUserChatsSubscription(meId, loadChats, !!meId && initialLoaded);
 
   /* фильтрация чатов по поисковому запросу */
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) {
+      if (allItems.length === 0) {
+        console.warn('allItems пустой, чаты не отображаются');
+      }
       return allItems;
     }
 
     const query = searchQuery.toLowerCase().trim();
-    return allItems.filter(
+    const filtered = allItems.filter(
       (item) =>
         item.name.toLowerCase().includes(query) || item.lastMessage.toLowerCase().includes(query)
     );
+    if (filtered.length === 0) {
+      console.warn('filteredItems пустой, ничего не найдено по запросу:', query);
+    }
+    return filtered;
   }, [searchQuery, allItems]);
+
+  // Лог финального списка
+  console.log('filteredItems:', filteredItems);
 
   return (
     <div className='md:w-80 flex flex-col bg-[var(--c-bg-subtle)] w-full'>
