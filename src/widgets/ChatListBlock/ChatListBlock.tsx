@@ -1,29 +1,28 @@
 'use client';
 
-import { ChatList, type ChatListItem } from 'dobruniaui';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useMemo } from 'react';
+import { type ChatListItem } from 'dobruniaui';
+import { useCallback, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 
 import { userService, type ChatBrief } from '@/shared/lib/supabase/Classes/userService';
 import { selectProfile } from '@/shared/store/profileSlice';
+import MyChatsSearchInput from './SearchBlock/MyChatsSearchInput';
+import ChatListComponent from './ChatList/ChatList';
 
 /* -------- утилита: ChatBrief ➜ ChatListItem -------- */
 const toListItem = ({ _t, ...rest }: any): ChatListItem => rest as ChatListItem;
 
-export default function ChatListComponent() {
-  const router = useRouter();
-  const { chatId: selectedChatId } = useParams() as { chatId?: string };
-
+export default function ChatListBlock() {
   /* берём id из Redux через селектор (null-safe) */
   const meId = useSelector(selectProfile)?.id;
 
-  const [items, setItems] = useState<ChatListItem[]>([]);
+  const [allItems, setAllItems] = useState<ChatListItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const cancelled = useRef(false); // отмена setState после unmount
 
-  /* ---------- загрузка чатов ---------- */
   const loadChats = useCallback(async () => {
     if (!meId) return; // профиль ещё не готов
     setLoading(true);
@@ -31,7 +30,10 @@ export default function ChatListComponent() {
 
     try {
       const list: ChatBrief[] = await userService.listChats(meId);
-      if (!cancelled.current) setItems(list.map(toListItem));
+      if (!cancelled.current) {
+        const items = list.map(toListItem);
+        setAllItems(items);
+      }
     } catch (e) {
       console.error(e);
       if (!cancelled.current) setError('Не удалось загрузить чаты');
@@ -49,26 +51,31 @@ export default function ChatListComponent() {
     };
   }, [loadChats]);
 
-  /* ---------- UI ---------- */
-  if (error) {
-    return (
-      <div className='p-4 text-center text-[var(--c-warning)]'>
-        <p>{error}</p>
-        <button onClick={loadChats} className='mt-2 text-[var(--c-accent)] hover:underline'>
-          Повторить попытку
-        </button>
-      </div>
+  /* фильтрация чатов по поисковому запросу */
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return allItems;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    return allItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(query) || item.lastMessage.toLowerCase().includes(query)
     );
-  }
+  }, [searchQuery, allItems]);
 
   return (
-    <ChatList
-      items={items}
-      selectedId={selectedChatId}
-      onSelect={(id) => router.push(`/chats/${id}`)}
-      loading={loading}
-      skeletonCount={4}
-      className='h-full mt-[1px] border-r border-[var(--c-border)]'
-    />
+    <div className='w-80 flex flex-col bg-[var(--c-bg-subtle)]'>
+      {/* Поиск по чатам */}
+      <MyChatsSearchInput searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+
+      {/* Список чатов */}
+      <ChatListComponent
+        items={filteredItems}
+        loading={loading}
+        error={error}
+        onRetry={loadChats}
+      />
+    </div>
   );
 }

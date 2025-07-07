@@ -1,6 +1,5 @@
 import React from 'react';
-import ChatList from '@/widgets/ChatList/ChatList';
-import MyChatsSearchInput from '@/widgets/Search/MyChatsSearchInput';
+import ChatListBlock from '@/widgets/ChatListBlock/ChatListBlock';
 import MobileLayout from './MobileLayout';
 import Header from '@/widgets/Header/Header';
 import AppProviders from '@/features/Providers/Providers';
@@ -17,15 +16,7 @@ export default function ChatsLayout({ children }: ChatsLayoutProps) {
         {/* Desktop Layout */}
         <div className='hidden md:flex flex-1'>
           {/* Sidebar с списком чатов */}
-          <div className='w-80 flex flex-col bg-[var(--c-bg-subtle)]'>
-            {/* Поиск по чатам */}
-            <MyChatsSearchInput />
-
-            {/* Список чатов */}
-            <ChatList />
-          </div>
-
-          {/* Основной контент - история сообщений */}
+          <ChatListBlock />
           <div className='flex-1 flex flex-col bg-[var(--c-bg-default)]'>{children}</div>
         </div>
 

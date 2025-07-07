@@ -4,8 +4,15 @@ import { useState } from 'react';
 import { SearchInput, Button } from 'dobruniaui';
 import UsersSearchModal from './UsersSearch/UsersSearchModal';
 
-export default function MyChatsSearchInput() {
-  const [searchQuery, setSearchQuery] = useState('');
+interface MyChatsSearchInputProps {
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+}
+
+export default function MyChatsSearchInput({
+  searchQuery,
+  onSearchChange,
+}: MyChatsSearchInputProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
@@ -13,7 +20,7 @@ export default function MyChatsSearchInput() {
       <SearchInput
         placeholder={'Поиск...'}
         value={searchQuery}
-        onChange={setSearchQuery}
+        onChange={onSearchChange}
         className='w-[80%]!'
       />
       <Button variant='secondary' shape='square' onClick={() => setModalOpen(true)}>

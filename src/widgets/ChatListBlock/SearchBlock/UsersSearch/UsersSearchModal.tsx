@@ -82,7 +82,13 @@ export default function UsersSearchModal({
         return users.map((u) => (
           <Row
             key={u.id}
-            left={<Avatar src={u.avatar_url} name={u.username} size='sm' showStatus={false} />}
+            left={
+              <Avatar
+                src={u.avatar_url}
+                name={u.username}
+                size='sm'
+              />
+            }
             center={
               <div>
                 <div className='font-medium'>{u.username}</div>

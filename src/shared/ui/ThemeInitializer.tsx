@@ -1,12 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import { initThemeSystem } from 'dobruniaui';
-
+if (typeof window !== 'undefined') initThemeSystem();
 export default function ThemeInitializer() {
-  useEffect(() => {
-    initThemeSystem();
-  }, []);
-
   return null;
 }

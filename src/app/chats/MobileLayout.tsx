@@ -1,8 +1,8 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import ChatList from '../../widgets/ChatList/ChatList';
-import MyChatsSearchInput from '../../widgets/Search/MyChatsSearchInput';
+import ChatList from '../../widgets/ChatListBlock/ChatList/ChatList';
+import MyChatsSearchInput from '../../widgets/ChatListBlock/SearchBlock/MyChatsSearchInput';
 import BackButton from './BackButton';
 
 interface MobileLayoutProps {
