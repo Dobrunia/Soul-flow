@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { Avatar, Skeleton, DESIGN_TOKENS, ActionsMenu, type ActionsMenuAction } from 'dobruniaui';
 
 import { useSelector } from 'react-redux';
@@ -8,6 +8,7 @@ import { auth } from '@/shared/lib/supabase/Classes/authService';
 import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
 import { selectProfile } from '@/shared/store/profileSlice';
 import { useRouter } from 'next/navigation';
+import { useClickOutside } from '@/shared/hooks/useClickOutside';
 import SettingsModal from './Settings/SettingsModal';
 
 export default function UserDropdown() {
@@ -16,16 +17,9 @@ export default function UserDropdown() {
   const { loading } = useSetProfile(); // только флаг
   const [isOpen, setIsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  /* закрываем меню при клике вне */
-  useEffect(() => {
-    const outside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    if (isOpen) document.addEventListener('mousedown', outside);
-    return () => document.removeEventListener('mousedown', outside);
-  }, [isOpen]);
+  // Используем кастомный хук для обработки кликов вне элемента
+  const dropdownRef = useClickOutside<HTMLDivElement>(isOpen, () => setIsOpen(false));
 
   const menuItems: ActionsMenuAction[] = [
     {

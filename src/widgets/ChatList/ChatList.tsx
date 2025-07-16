@@ -59,6 +59,10 @@ export default function ChatList() {
         isTyping: false, // TODO: добавить индикатор печати
         messageStatus: chatLastMessage?.status === 'read' ? 'read' : 'unread', // приводим к типу ChatListItem
         isOutgoing: chatLastMessage?.sender_id === me?.id, // true если сообщение от текущего пользователя
+        status:
+          chat.type === 'direct'
+            ? (companion?.status as 'online' | 'offline' | 'dnd' | 'invisible') || 'offline'
+            : 'offline', // статус пользователя
       };
     });
   }, [chats, me?.id, lastMessages, allParticipants]);
