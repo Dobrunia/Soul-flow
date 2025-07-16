@@ -6,8 +6,7 @@ import { Message, Avatar, Row, LoadingSpinner } from 'dobruniaui';
 import MessageInput from './MessageInput';
 import type { Profile } from '@/types/types';
 import { useSelector, useDispatch } from 'react-redux';
-import { selectProfile } from '@/shared/store/profileSlice';
-import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
+import { selectProfile, selectProfileLoading } from '@/shared/store/profileSlice';
 import { fetchChatMessages } from '@/shared/store/messageSlice';
 import { fetchChatParticipants } from '@/shared/store/participantSlice';
 import { fetchChat, selectChats } from '@/shared/store/chatSlice';
@@ -31,8 +30,8 @@ const isUUID = (s: string) =>
 export default function ChatPage() {
   const { chatId: rawChatId } = useParams() as { chatId?: string };
   const me = useSelector(selectProfile);
+  const profileLoading = useSelector(selectProfileLoading);
   const dispatch = useDispatch<AppDispatch>();
-  const { loading: profileLoading } = useSetProfile();
 
   // Проверяем валидность chatId
   const isValidChatId = rawChatId && isUUID(rawChatId);

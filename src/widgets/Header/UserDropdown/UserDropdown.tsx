@@ -5,16 +5,26 @@ import { Avatar, Skeleton, DESIGN_TOKENS, ActionsMenu, type ActionsMenuAction } 
 
 import { useSelector } from 'react-redux';
 import { auth } from '@/shared/lib/supabase/Classes/authService';
-import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
-import { selectProfile } from '@/shared/store/profileSlice';
+import {
+  selectProfile,
+  selectProfileLoading,
+  selectUsername,
+  selectUserEmail,
+  selectUserAvatar,
+  selectUserStatus,
+} from '@/shared/store/profileSlice';
 import { useRouter } from 'next/navigation';
 import { useClickOutside } from '@/shared/hooks/useClickOutside';
 import SettingsModal from './Settings/SettingsModal';
 
 export default function UserDropdown() {
   const profile = useSelector(selectProfile);
+  const loading = useSelector(selectProfileLoading);
+  const username = useSelector(selectUsername);
+  const email = useSelector(selectUserEmail);
+  const avatar = useSelector(selectUserAvatar);
+  const status = useSelector(selectUserStatus);
   const router = useRouter();
-  const { loading } = useSetProfile(); // только флаг
   const [isOpen, setIsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -83,11 +93,7 @@ export default function UserDropdown() {
       >
         {/* Аватар */}
         {!loading && profile ? (
-          <Avatar
-            src={profile.avatar_url ?? ''}
-            name={profile.username ?? ''}
-            status={profile.status}
-          />
+          <Avatar src={avatar} name={username} status={status} />
         ) : (
           <Skeleton
             variant='circular'
@@ -100,8 +106,8 @@ export default function UserDropdown() {
         <div className='flex flex-col'>
           {!loading && profile ? (
             <>
-              <span className='text-sm font-medium'>{profile.username}</span>
-              <span className='text-xs text-[var(--c-text-secondary)]'>{profile.email}</span>
+              <span className='text-sm font-medium'>{username}</span>
+              <span className='text-xs text-[var(--c-text-secondary)]'>{email}</span>
             </>
           ) : (
             <>
