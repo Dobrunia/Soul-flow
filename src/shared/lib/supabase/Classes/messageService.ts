@@ -13,7 +13,12 @@ export class MessageService extends SupabaseCore {
 
     const { data: messages, error } = await this.supabase
       .from('messages')
-      .select('*, profiles:sender_id(id, username, avatar_url, status)')
+      .select(
+        `
+        *,
+        sender:sender_id(id, username, avatar_url, status)
+      `
+      )
       .eq('chat_id', chatId)
       .order('created_at', { ascending: false })
       .limit(messageLimit);
@@ -29,7 +34,7 @@ export class MessageService extends SupabaseCore {
       status: m.status,
       created_at: m.created_at,
       updated_at: m.updated_at,
-      sender: m.profiles[0],
+      sender: m.sender,
     }));
   }
 
@@ -41,7 +46,12 @@ export class MessageService extends SupabaseCore {
 
     const { data: message, error } = await this.supabase
       .from('messages')
-      .select('*, profiles:sender_id(id, username, avatar_url, status)')
+      .select(
+        `
+        *,
+        sender:sender_id(id, username, avatar_url, status)
+      `
+      )
       .eq('chat_id', chatId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -59,7 +69,7 @@ export class MessageService extends SupabaseCore {
       status: message.status,
       created_at: message.created_at,
       updated_at: message.updated_at,
-      sender: message.profiles[0],
+      sender: message.sender,
     };
   }
 }
