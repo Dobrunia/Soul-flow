@@ -2,7 +2,7 @@
 
 import { useParams, notFound } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Message, MessageContainer, Avatar, Row, LoadingSpinner } from 'dobruniaui';
+import { Message, Avatar, Row, LoadingSpinner } from 'dobruniaui';
 import MessageInput from './MessageInput';
 import { chatService } from '@/shared/lib/supabase/Classes/chatService';
 import type { Chat, Message as DBMessage, Profile } from '@/types/types';
@@ -96,7 +96,7 @@ export default function ChatPage() {
         className='bg-gray-100 border-b'
         centerJustify='left'
       />
-      <MessageContainer autoScrollToBottom lastMessageId={messages.at(-1)?.id}>
+      <MessageInput onSendMessage={() => {}}>
         {messages.map((m) => (
           <Message
             key={m.id}
@@ -117,8 +117,7 @@ export default function ChatPage() {
             isRead={m.status === 'read'}
           />
         ))}
-      </MessageContainer>
-      <MessageInput onSendMessage={() => {}} />
+      </MessageInput>
     </div>
   );
 }

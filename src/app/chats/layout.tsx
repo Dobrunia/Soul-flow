@@ -1,5 +1,5 @@
 import React from 'react';
-import ChatListBlock from '@/widgets/ChatListBlock/ChatListBlock';
+import ChatList from '@/widgets/ChatList/ChatList';
 import MobileLayout from './MobileLayout';
 import Header from '@/widgets/Header/Header';
 import AppProviders from '@/features/Providers/Providers';
@@ -16,7 +16,7 @@ export default function ChatsLayout({ children }: ChatsLayoutProps) {
         {/* Desktop Layout */}
         <div className='hidden md:flex flex-1'>
           {/* Sidebar с списком чатов */}
-          <ChatListBlock />
+          <ChatList />
           <div className='flex-1 flex flex-col bg-[var(--c-bg-default)]'>{children}</div>
         </div>
 
