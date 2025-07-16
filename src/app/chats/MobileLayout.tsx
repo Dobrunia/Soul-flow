@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import BackButton from './BackButton';
-import ChatList from '@/widgets/ChatList/ChatList';
+import ChatList from '@/features/ChatList/ChatList';
 
 interface MobileLayoutProps {
   children: React.ReactNode;

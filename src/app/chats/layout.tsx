@@ -1,5 +1,5 @@
 import React from 'react';
-import ChatList from '@/widgets/ChatList/ChatList';
+import ChatList from '@/features/ChatList/ChatList';
 import MobileLayout from './MobileLayout';
 import Header from '@/widgets/Header/Header';
 import AppProviders from '@/features/Providers/Providers';
