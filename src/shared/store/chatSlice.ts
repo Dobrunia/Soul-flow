@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import { chatService } from '@/shared/lib/supabase/Classes/chatService';
 import type { Chat } from '@/types/types';
+import { createSelector } from '@reduxjs/toolkit';
 
 interface ChatState {
   chats: Chat[];
@@ -82,3 +83,15 @@ export const selectChats = (state: RootState) => state.chat.chats;
 export const selectCurrentChat = (state: RootState) => state.chat.currentChat;
 export const selectChatLoading = (state: RootState) => state.chat.loading;
 export const selectChatError = (state: RootState) => state.chat.error;
+
+// Селектор для проверки загруженности чатов
+export const selectChatsLoaded = createSelector(
+  [selectChats, selectChatLoading],
+  (chats, loading) => chats.length > 0 && !loading
+);
+
+// Селектор для проверки загруженности конкретного чата
+export const selectChatLoaded = createSelector(
+  [selectChats, (state: RootState, chatId: string) => chatId],
+  (chats, chatId) => chats.some((chat) => chat.id === chatId)
+);

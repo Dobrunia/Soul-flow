@@ -8,10 +8,19 @@ import {
   selectChats,
   selectChatLoading,
   selectChatError,
+  selectChatsLoaded,
   fetchChats,
 } from '@/shared/store/chatSlice';
-import { selectLastMessages, fetchLastMessage } from '@/shared/store/messageSlice';
-import { selectAllParticipants, fetchChatParticipants } from '@/shared/store/participantSlice';
+import {
+  selectLastMessages,
+  selectLastMessageLoaded,
+  fetchLastMessage,
+} from '@/shared/store/messageSlice';
+import {
+  selectAllParticipants,
+  selectChatParticipantsLoaded,
+  fetchChatParticipants,
+} from '@/shared/store/participantSlice';
 import { useRouter, usePathname } from 'next/navigation';
 import type { AppDispatch } from '@/shared/store';
 import type { ChatListItem } from 'dobruniaui';
@@ -24,6 +33,7 @@ export default function ChatList() {
   const chats = useSelector(selectChats);
   const loading = useSelector(selectChatLoading);
   const error = useSelector(selectChatError);
+  const chatsLoaded = useSelector(selectChatsLoaded);
   const lastMessages = useSelector(selectLastMessages);
   const allParticipants = useSelector(selectAllParticipants);
 
@@ -70,19 +80,35 @@ export default function ChatList() {
   useEffect(() => {
     if (!me?.id) return;
 
-    dispatch(fetchChats(me.id));
-  }, [me?.id, dispatch]);
+    // Загружаем чаты только если они еще не загружены
+    if (!chatsLoaded) {
+      dispatch(fetchChats(me.id));
+    }
+  }, [me?.id, chatsLoaded, dispatch]);
 
   // Загружаем данные для каждого чата параллельно
   useEffect(() => {
     if (chats.length === 0) return;
 
-    // Загружаем последние сообщения и участников для всех чатов параллельно
+    // Загружаем последние сообщения и участников только для тех чатов, которые еще не загружены
     chats.forEach((chat) => {
-      dispatch(fetchLastMessage(chat.id));
-      dispatch(fetchChatParticipants(chat.id));
+      const lastMessageLoaded = selectLastMessageLoaded(
+        { message: { lastMessages } } as any,
+        chat.id
+      );
+      const participantsLoaded = selectChatParticipantsLoaded(
+        { participant: { participants: allParticipants } } as any,
+        chat.id
+      );
+
+      if (!lastMessageLoaded) {
+        dispatch(fetchLastMessage(chat.id));
+      }
+      if (!participantsLoaded) {
+        dispatch(fetchChatParticipants(chat.id));
+      }
     });
-  }, [chats, dispatch]);
+  }, [chats, lastMessages, allParticipants, dispatch]);
 
   const handleChatSelect = (chatId: string) => {
     router.push(`/chats/${chatId}`);

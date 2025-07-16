@@ -103,3 +103,9 @@ export const selectChatMessagesLoaded = createSelector(
   [selectChatMessages, (state: RootState, chatId: string) => chatId],
   (chatMessages, chatId) => chatId in chatMessages
 );
+
+// Селектор для проверки загруженности последнего сообщения чата
+export const selectLastMessageLoaded = createSelector(
+  [selectLastMessages, (state: RootState, chatId: string) => chatId],
+  (lastMessages, chatId) => chatId in lastMessages
+);
