@@ -64,9 +64,7 @@ export default function ChatList() {
               minute: '2-digit',
             })
           : '',
-        unreadCount: 0, // TODO: добавить подсчет непрочитанных
         isOnline: chat.type === 'direct' ? companion?.status === 'online' : false,
-        isTyping: false, // TODO: добавить индикатор печати
         messageStatus: chatLastMessage?.status === 'read' ? 'read' : 'unread', // приводим к типу ChatListItem
         isOutgoing: chatLastMessage?.sender_id === me?.id, // true если сообщение от текущего пользователя
         status:

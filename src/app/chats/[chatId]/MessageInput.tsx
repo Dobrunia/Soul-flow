@@ -20,10 +20,6 @@ export default function MessageInput({ onSendMessage, children }: MessageInputPr
     }
   };
 
-  const handleEmojiSelect = (emoji: string) => {
-    setMessage((prev) => prev + emoji);
-  };
-
   const handleAudioRecord = (audio: Blob) => {
     // TODO: Реализовать отправку аудио
     console.log('Audio recorded:', audio);
@@ -39,7 +35,6 @@ export default function MessageInput({ onSendMessage, children }: MessageInputPr
           onFilesChange={setFiles}
           placeholder='Введите сообщение...'
           onSend={handleSend}
-          onEmojiSelect={handleEmojiSelect}
           onAudioRecord={handleAudioRecord}
           maxHeight={400}
         >
