@@ -4,25 +4,25 @@ import { messageService } from '@/shared/lib/supabase/Classes/messageService';
 import type { Message, Profile } from '@/types/types';
 
 interface MessageState {
-  messages: Array<Message & { sender: Profile }>;
+  chatMessages: Record<string, Array<Message & { sender: Profile }>>; // chatId -> messages
   lastMessages: Record<string, (Message & { sender: Profile }) | null>; // chatId -> lastMessage
   loading: boolean;
   error: string | null;
 }
 
 const initialState: MessageState = {
-  messages: [],
+  chatMessages: {},
   lastMessages: {},
   loading: false,
   error: null,
 };
 
 // Async thunk для загрузки последних сообщений чата
-export const fetchLastMessages = createAsyncThunk(
-  'message/fetchLastMessages',
+export const fetchChatMessages = createAsyncThunk(
+  'message/fetchChatMessages',
   async ({ chatId, messageLimit }: { chatId: string; messageLimit?: number }) => {
-    const messages = await messageService.getLastMessages(chatId, messageLimit);
-    return messages;
+    const messages = await messageService.getChatMessages(chatId, messageLimit);
+    return { chatId, messages };
   }
 );
 
@@ -40,7 +40,7 @@ const messageSlice = createSlice({
   initialState,
   reducers: {
     clearMessages(state) {
-      state.messages = [];
+      state.chatMessages = {};
       state.lastMessages = {};
       state.error = null;
     },
@@ -50,17 +50,17 @@ const messageSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // fetchLastMessages
-      .addCase(fetchLastMessages.pending, (state) => {
+      // fetchChatMessages
+      .addCase(fetchChatMessages.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchLastMessages.fulfilled, (state, action) => {
+      .addCase(fetchChatMessages.fulfilled, (state, action) => {
         state.loading = false;
         state.error = null;
-        state.messages = action.payload;
+        state.chatMessages[action.payload.chatId] = action.payload.messages;
       })
-      .addCase(fetchLastMessages.rejected, (state, action) => {
+      .addCase(fetchChatMessages.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Не удалось загрузить сообщения';
       })
@@ -84,8 +84,22 @@ const messageSlice = createSlice({
 export const { clearMessages, setError } = messageSlice.actions;
 export default messageSlice.reducer;
 
+import { createSelector } from '@reduxjs/toolkit';
+
 /* -------- селекторы -------- */
-export const selectMessages = (state: RootState) => state.message.messages;
-export const selectLastMessage = (state: RootState) => state.message.lastMessages;
+export const selectChatMessages = (state: RootState) => state.message.chatMessages;
+export const selectLastMessages = (state: RootState) => state.message.lastMessages;
 export const selectMessageLoading = (state: RootState) => state.message.loading;
 export const selectMessageError = (state: RootState) => state.message.error;
+
+// Мемоизированный селектор для последнего сообщения конкретного чата
+export const selectLastMessage = createSelector(
+  [selectLastMessages, (state: RootState, chatId: string) => chatId],
+  (lastMessages, chatId) => lastMessages[chatId] || null
+);
+
+// Селектор для проверки загруженности сообщений чата
+export const selectChatMessagesLoaded = createSelector(
+  [selectChatMessages, (state: RootState, chatId: string) => chatId],
+  (chatMessages, chatId) => chatId in chatMessages
+);

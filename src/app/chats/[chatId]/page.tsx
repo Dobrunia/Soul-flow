@@ -8,20 +8,22 @@ import type { Profile } from '@/types/types';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
 import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
-import { fetchLastMessages } from '@/shared/store/messageSlice';
+import { fetchChatMessages } from '@/shared/store/messageSlice';
 import { fetchChatParticipants } from '@/shared/store/participantSlice';
-import { fetchChat, selectCurrentChat } from '@/shared/store/chatSlice';
+import { fetchChat, selectChats } from '@/shared/store/chatSlice';
 import {
-  selectMessages,
+  selectChatMessages,
   selectMessageLoading,
   selectMessageError,
+  selectChatMessagesLoaded,
 } from '@/shared/store/messageSlice';
 import {
   selectParticipants,
   selectParticipantLoading,
   selectParticipantError,
+  selectChatParticipantsLoaded,
 } from '@/shared/store/participantSlice';
-import type { AppDispatch } from '@/shared/store';
+import type { AppDispatch, RootState } from '@/shared/store';
 
 const isUUID = (s: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -32,31 +34,58 @@ export default function ChatPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { loading: profileLoading } = useSetProfile();
 
-  // Redux selectors
-  const messages = useSelector(selectMessages);
-  const messageLoading = useSelector(selectMessageLoading);
-  const messageError = useSelector(selectMessageError);
-  const participants = useSelector(selectParticipants);
-  const participantLoading = useSelector(selectParticipantLoading);
-  const participantError = useSelector(selectParticipantError);
-  const currentChat = useSelector(selectCurrentChat);
-
   // Проверяем валидность chatId
   const isValidChatId = rawChatId && isUUID(rawChatId);
   const chatId = isValidChatId ? rawChatId : '';
   const myId = me?.id;
 
+  // Redux selectors (после определения chatId)
+  const chatMessages = useSelector(
+    (state: RootState) => selectChatMessages(state)[chatId] || [],
+    (prev, next) => {
+      // Мемоизируем результат, сравнивая массивы по содержимому
+      if (prev.length !== next.length) return false;
+      return prev.every((msg, index) => msg.id === next[index]?.id);
+    }
+  );
+  const messageLoading = useSelector(selectMessageLoading);
+  const messageError = useSelector(selectMessageError);
+  const messagesLoaded = useSelector((state: RootState) => selectChatMessagesLoaded(state, chatId));
+  const participants = useSelector((state: RootState) => selectParticipants(state, chatId));
+  const participantLoading = useSelector(selectParticipantLoading);
+  const participantError = useSelector(selectParticipantError);
+  const participantsLoaded = useSelector((state: RootState) =>
+    selectChatParticipantsLoaded(state, chatId)
+  );
+  const allChats = useSelector(selectChats);
+  const currentChat = allChats.find((chat) => chat.id === chatId);
+
   useEffect(() => {
     if (profileLoading || !isValidChatId || !myId) return;
 
-    // Загружаем данные через Redux
-    dispatch(fetchChat(chatId));
-    dispatch(fetchLastMessages({ chatId, messageLimit: 10 }));
-    dispatch(fetchChatParticipants(chatId));
-  }, [chatId, dispatch, profileLoading, isValidChatId, myId]);
+    // Загружаем данные через Redux только если они еще не загружены
+    if (!currentChat) {
+      dispatch(fetchChat(chatId));
+    }
+    if (!messagesLoaded) {
+      dispatch(fetchChatMessages({ chatId, messageLimit: 10 }));
+    }
+    if (!participantsLoaded) {
+      dispatch(fetchChatParticipants(chatId));
+    }
+  }, [
+    chatId,
+    dispatch,
+    profileLoading,
+    isValidChatId,
+    myId,
+    currentChat,
+    messagesLoaded,
+    participantsLoaded,
+  ]);
 
   // Вычисляем companion из Redux данных
-  const companion = participants[chatId]?.find((p: Profile) => p.id !== myId) ?? null;
+  const companion = participants?.find((p: Profile) => p.id !== myId) ?? null;
 
   const loading = messageLoading || participantLoading;
   const error = messageError || participantError;
@@ -104,7 +133,7 @@ export default function ChatPage() {
         centerJustify='left'
       />
       <MessageInput onSendMessage={() => {}}>
-        {messages.map((m) => (
+        {chatMessages.map((m: any) => (
           <Message
             key={m.id}
             currentUserId={myId}

@@ -5,7 +5,7 @@ export class MessageService extends SupabaseCore {
   /**
    * Получить N последних сообщений чата с профилями отправителей
    */
-  async getLastMessages(
+  async getChatMessages(
     chatId: string,
     messageLimit = 10
   ): Promise<Array<Message & { sender: Profile }>> {

@@ -10,28 +10,32 @@ import {
   selectChatError,
   fetchChats,
 } from '@/shared/store/chatSlice';
-import { selectLastMessage, fetchLastMessage } from '@/shared/store/messageSlice';
-import { selectParticipants, fetchChatParticipants } from '@/shared/store/participantSlice';
-import { useRouter } from 'next/navigation';
+import { selectLastMessages, fetchLastMessage } from '@/shared/store/messageSlice';
+import { selectAllParticipants, fetchChatParticipants } from '@/shared/store/participantSlice';
+import { useRouter, usePathname } from 'next/navigation';
 import type { AppDispatch } from '@/shared/store';
 import type { ChatListItem } from 'dobruniaui';
 
 export default function ChatList() {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const me = useSelector(selectProfile);
   const chats = useSelector(selectChats);
   const loading = useSelector(selectChatLoading);
   const error = useSelector(selectChatError);
-  const lastMessage = useSelector(selectLastMessage);
-  const participants = useSelector(selectParticipants);
+  const lastMessages = useSelector(selectLastMessages);
+  const allParticipants = useSelector(selectAllParticipants);
+
+  // Получаем текущий chatId из URL
+  const selectedId = pathname.startsWith('/chats/') ? pathname.split('/')[2] : null;
 
   // Преобразуем сырые данные БД в UI формат
   const chatItems: ChatListItem[] = useMemo(() => {
     return chats.map((chat) => {
       // Получаем данные для конкретного чата
-      const chatLastMessage = lastMessage[chat.id];
-      const chatParticipants = participants[chat.id];
+      const chatLastMessage = lastMessages[chat.id];
+      const chatParticipants = allParticipants[chat.id];
 
       // Находим собеседника для direct чата
       let companion = undefined;
@@ -55,7 +59,7 @@ export default function ChatList() {
         isTyping: false, // TODO: добавить индикатор печати
       };
     });
-  }, [chats, me?.id, lastMessage, participants]);
+  }, [chats, me?.id, lastMessages, allParticipants]);
 
   useEffect(() => {
     if (!me?.id) return;
@@ -107,6 +111,7 @@ export default function ChatList() {
       <DobrunniaChatList
         items={chatItems}
         onSelect={handleChatSelect}
+        selectedId={selectedId || undefined}
         loading={loading}
         className='flex-1'
       />

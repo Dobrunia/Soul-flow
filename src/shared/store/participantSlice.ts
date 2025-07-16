@@ -57,7 +57,21 @@ const participantSlice = createSlice({
 export const { clearParticipants, setError } = participantSlice.actions;
 export default participantSlice.reducer;
 
+import { createSelector } from '@reduxjs/toolkit';
+
 /* -------- селекторы -------- */
-export const selectParticipants = (state: RootState) => state.participant.participants;
+export const selectAllParticipants = (state: RootState) => state.participant.participants;
 export const selectParticipantLoading = (state: RootState) => state.participant.loading;
 export const selectParticipantError = (state: RootState) => state.participant.error;
+
+// Мемоизированный селектор для участников конкретного чата
+export const selectParticipants = createSelector(
+  [selectAllParticipants, (state: RootState, chatId: string) => chatId],
+  (allParticipants, chatId) => allParticipants[chatId] || []
+);
+
+// Селектор для проверки загруженности участников чата
+export const selectChatParticipantsLoaded = createSelector(
+  [selectAllParticipants, (state: RootState, chatId: string) => chatId],
+  (allParticipants, chatId) => chatId in allParticipants
+);
