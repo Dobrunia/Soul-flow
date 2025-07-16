@@ -77,7 +77,7 @@ export default function ChatPage() {
     );
 
   return (
-    <div className='flex flex-col h-full bg-white'>
+    <div className='flex flex-col h-full'>
       <Row
         left={
           <Avatar
@@ -93,7 +93,7 @@ export default function ChatPage() {
             {chatData?.type === 'direct' ? companion?.username : chatData?.name}
           </h2>
         }
-        className='bg-gray-100 border-b'
+        className='border-b border-[var(--c-border)]'
         centerJustify='left'
       />
       <MessageInput onSendMessage={() => {}}>
