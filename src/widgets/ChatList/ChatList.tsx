@@ -10,6 +10,8 @@ import {
   selectChatError,
   fetchChats,
 } from '@/shared/store/chatSlice';
+import { selectLastMessage, fetchLastMessage } from '@/shared/store/messageSlice';
+import { selectParticipants, fetchChatParticipants } from '@/shared/store/participantSlice';
 import { useRouter } from 'next/navigation';
 import type { AppDispatch } from '@/shared/store';
 import type { ChatListItem } from 'dobruniaui';
@@ -21,23 +23,29 @@ export default function ChatList() {
   const chats = useSelector(selectChats);
   const loading = useSelector(selectChatLoading);
   const error = useSelector(selectChatError);
+  const lastMessage = useSelector(selectLastMessage);
+  const participants = useSelector(selectParticipants);
 
   // Преобразуем сырые данные БД в UI формат
   const chatItems: ChatListItem[] = useMemo(() => {
-    return chats.map(({ chat, lastMessage, participants }) => {
+    return chats.map((chat) => {
+      // Получаем данные для конкретного чата
+      const chatLastMessage = lastMessage[chat.id];
+      const chatParticipants = participants[chat.id];
+
       // Находим собеседника для direct чата
       let companion = undefined;
-      if (chat.type === 'direct' && participants) {
-        companion = participants.find((p) => p.id !== me?.id);
+      if (chat.type === 'direct' && chatParticipants) {
+        companion = chatParticipants.find((p: any) => p.id !== me?.id);
       }
 
       return {
         id: chat.id,
-        name: chat.type === 'direct' ? companion?.username || 'Неизвестный' : chat.name || 'Группа',
+        name: chat.type === 'direct' ? companion?.username || 'Direct Chat' : chat.name || 'Группа',
         avatar: chat.type === 'direct' ? companion?.avatar_url || undefined : undefined,
-        lastMessage: lastMessage?.content || '',
-        time: lastMessage?.created_at
-          ? new Date(lastMessage.created_at).toLocaleTimeString('ru-RU', {
+        lastMessage: chatLastMessage?.content || '',
+        time: chatLastMessage?.created_at
+          ? new Date(chatLastMessage.created_at).toLocaleTimeString('ru-RU', {
               hour: '2-digit',
               minute: '2-digit',
             })
@@ -47,13 +55,24 @@ export default function ChatList() {
         isTyping: false, // TODO: добавить индикатор печати
       };
     });
-  }, [chats, me?.id]);
+  }, [chats, me?.id, lastMessage, participants]);
 
   useEffect(() => {
     if (!me?.id) return;
 
     dispatch(fetchChats(me.id));
   }, [me?.id, dispatch]);
+
+  // Загружаем данные для каждого чата параллельно
+  useEffect(() => {
+    if (chats.length === 0) return;
+
+    // Загружаем последние сообщения и участников для всех чатов параллельно
+    chats.forEach((chat) => {
+      dispatch(fetchLastMessage(chat.id));
+      dispatch(fetchChatParticipants(chat.id));
+    });
+  }, [chats, dispatch]);
 
   const handleChatSelect = (chatId: string) => {
     router.push(`/chats/${chatId}`);

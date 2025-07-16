@@ -4,11 +4,24 @@ import { useParams, notFound } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Message, Avatar, Row, LoadingSpinner } from 'dobruniaui';
 import MessageInput from './MessageInput';
-import { chatService } from '@/shared/lib/supabase/Classes/chatService';
-import type { Chat, Message as DBMessage, Profile } from '@/types/types';
-import { useSelector } from 'react-redux';
+import type { Profile } from '@/types/types';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
 import { useSetProfile } from '@/features/Providers/api/SetProfileProvider';
+import { fetchLastMessages } from '@/shared/store/messageSlice';
+import { fetchChatParticipants } from '@/shared/store/participantSlice';
+import { fetchChat, selectCurrentChat } from '@/shared/store/chatSlice';
+import {
+  selectMessages,
+  selectMessageLoading,
+  selectMessageError,
+} from '@/shared/store/messageSlice';
+import {
+  selectParticipants,
+  selectParticipantLoading,
+  selectParticipantError,
+} from '@/shared/store/participantSlice';
+import type { AppDispatch } from '@/shared/store';
 
 const isUUID = (s: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -16,47 +29,41 @@ const isUUID = (s: string) =>
 export default function ChatPage() {
   const { chatId: rawChatId } = useParams() as { chatId?: string };
   const me = useSelector(selectProfile);
+  const dispatch = useDispatch<AppDispatch>();
   const { loading: profileLoading } = useSetProfile();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const [chatData, setChatData] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<(DBMessage & { sender: Profile | undefined })[]>([]);
-  const [companion, setCompanion] = useState<Profile | null>(null);
+  // Redux selectors
+  const messages = useSelector(selectMessages);
+  const messageLoading = useSelector(selectMessageLoading);
+  const messageError = useSelector(selectMessageError);
+  const participants = useSelector(selectParticipants);
+  const participantLoading = useSelector(selectParticipantLoading);
+  const participantError = useSelector(selectParticipantError);
+  const currentChat = useSelector(selectCurrentChat);
 
-  if (!rawChatId || !isUUID(rawChatId)) notFound();
-  const chatId = rawChatId;
+  // Проверяем валидность chatId
+  const isValidChatId = rawChatId && isUUID(rawChatId);
+  const chatId = isValidChatId ? rawChatId : '';
   const myId = me?.id;
-  if (!myId) return null; // профайл ещё не поднят
 
   useEffect(() => {
-    if (profileLoading) return;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // проверяем доступ
-        if (!(await chatService.hasAccess(chatId, myId))) {
-          throw new Error('Нет доступа');
-        }
-        // загружаем чат + сообщения
-        const {
-          chat,
-          participants,
-          messages: dbMessages,
-        } = await chatService.getChatWithMessages(chatId, myId, 10);
+    if (profileLoading || !isValidChatId || !myId) return;
 
-        setChatData(chat);
-        setCompanion(participants?.find((p) => p.id !== myId) ?? null);
-        setMessages(dbMessages);
-      } catch (e) {
-        console.error(e);
-        setError((e as Error).message || 'Ошибка');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [chatId, myId, profileLoading]);
+    // Загружаем данные через Redux
+    dispatch(fetchChat(chatId));
+    dispatch(fetchLastMessages({ chatId, messageLimit: 10 }));
+    dispatch(fetchChatParticipants(chatId));
+  }, [chatId, dispatch, profileLoading, isValidChatId, myId]);
+
+  // Вычисляем companion из Redux данных
+  const companion = participants[chatId]?.find((p: Profile) => p.id !== myId) ?? null;
+
+  const loading = messageLoading || participantLoading;
+  const error = messageError || participantError;
+
+  // Ранний возврат после всех хуков
+  if (!isValidChatId) notFound();
+  if (!myId) return null; // профайл ещё не поднят
 
   if (loading && !error)
     return (
@@ -90,7 +97,7 @@ export default function ChatPage() {
         }
         center={
           <h2 className='font-medium'>
-            {chatData?.type === 'direct' ? companion?.username : chatData?.name}
+            {currentChat?.type === 'direct' ? companion?.username : currentChat?.name || 'Чат'}
           </h2>
         }
         className='border-b border-[var(--c-border)]'
