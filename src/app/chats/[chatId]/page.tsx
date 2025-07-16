@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Message, Avatar, Row, LoadingSpinner } from 'dobruniaui';
 import MessageInput from './MessageInput';
 import type { Profile } from '@/types/types';

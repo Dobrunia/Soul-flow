@@ -6,7 +6,6 @@ import { Avatar, Skeleton, DESIGN_TOKENS, ActionsMenu, type ActionsMenuAction } 
 import { useSelector } from 'react-redux';
 import { auth } from '@/shared/lib/supabase/Classes/authService';
 import {
-  selectProfile,
   selectProfileLoading,
   selectUsername,
   selectUserEmail,
@@ -18,7 +17,6 @@ import { useClickOutside } from '@/shared/hooks/useClickOutside';
 import SettingsModal from './Settings/SettingsModal';
 
 export default function UserDropdown() {
-  const profile = useSelector(selectProfile);
   const loading = useSelector(selectProfileLoading);
   const username = useSelector(selectUsername);
   const email = useSelector(selectUserEmail);
@@ -92,7 +90,7 @@ export default function UserDropdown() {
         onClick={() => setIsOpen((o) => !o)}
       >
         {/* Аватар */}
-        {!loading && profile ? (
+        {!loading ? (
           <Avatar src={avatar} name={username} status={status} />
         ) : (
           <Skeleton
@@ -104,7 +102,7 @@ export default function UserDropdown() {
 
         {/* Имя / почта */}
         <div className='flex flex-col'>
-          {!loading && profile ? (
+          {!loading ? (
             <>
               <span className='text-sm font-medium'>{username}</span>
               <span className='text-xs text-[var(--c-text-secondary)]'>{email}</span>
