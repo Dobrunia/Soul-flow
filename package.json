@@ -11,7 +11,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
     "@supabase/ssr": "^0.6.1",
-    "dobruniaui": "^1.6.6",
+    "dobruniaui": "^1.6.11",
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

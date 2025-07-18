@@ -135,8 +135,6 @@ export default function ChatPage() {
         {chatMessages.map((m: any) => (
           <Message
             key={m.id}
-            currentUserId={myId}
-            reactionEmojis={['❤️', '😂', '👍', '🔥']}
             showActionsOnClick
             type={m.sender_id === myId ? 'outgoing' : 'incoming'}
             text={m.content}
@@ -149,7 +147,7 @@ export default function ChatPage() {
               name: m.sender?.username ?? 'Неизвестный',
               avatar: m.sender?.avatar_url ?? undefined,
             }}
-            isRead={m.status === 'read'}
+            isRead={m.sender_id === myId ? m.status : undefined}
           />
         ))}
       </MessageInput>
