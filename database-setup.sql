@@ -13,6 +13,18 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Таблица для отслеживания активности пользователей
+CREATE TABLE IF NOT EXISTS user_activity (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  last_ping TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  is_online BOOLEAN DEFAULT true NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  
+  UNIQUE(user_id)
+);
+
 -- Таблица чатов
 CREATE TABLE IF NOT EXISTS chats (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -58,6 +70,7 @@ CREATE TABLE IF NOT EXISTS message_reactions (
 
 -- Включаем Row Level Security
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_activity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
@@ -164,9 +177,20 @@ CREATE POLICY "Users can add reactions to messages in their chats" ON message_re
     )
   );
 
+-- Политики безопасности для user_activity
+CREATE POLICY "Users can view all activity" ON user_activity
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can update their own activity" ON user_activity
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own activity" ON user_activity
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
 -- Даем права authenticated пользователям
 GRANT INSERT, SELECT, UPDATE, DELETE ON chats TO authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON profiles TO authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON user_activity TO authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON chat_participants TO authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON messages TO authenticated;
 GRANT INSERT, SELECT, UPDATE, DELETE ON message_reactions TO authenticated;
@@ -254,4 +278,82 @@ BEGIN
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE profiles;
   END IF;
-END $$;  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'user_activity'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE user_activity;
+  END IF;
+END $$;
+
+-- Функции для автоматического управления статусами
+
+-- Функция для отправки пинга (heartbeat)
+CREATE OR REPLACE FUNCTION public.send_ping()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  -- Вставляем или обновляем запись активности
+  INSERT INTO user_activity (user_id, last_ping, is_online)
+  VALUES (auth.uid(), now(), true)
+  ON CONFLICT (user_id) 
+  DO UPDATE SET 
+    last_ping = now(),
+    is_online = true,
+    updated_at = now();
+    
+  -- Обновляем статус в profiles на 'online'
+  UPDATE profiles 
+  SET status = 'online', updated_at = now()
+  WHERE id = auth.uid() AND status != 'online';
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.send_ping() TO authenticated;
+
+-- Функция для проверки неактивных пользователей (каждые 15 секунд)
+CREATE OR REPLACE FUNCTION public.check_inactive_users()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  -- Находим пользователей, которые не отправляли пинг более 15 секунд
+  UPDATE user_activity 
+  SET is_online = false, updated_at = now()
+  WHERE last_ping < now() - INTERVAL '15 seconds' AND is_online = true;
+  
+  -- Обновляем статус в profiles для неактивных пользователей
+  UPDATE profiles 
+  SET status = 'offline', updated_at = now()
+  WHERE id IN (
+    SELECT user_id FROM user_activity 
+    WHERE is_online = false AND last_ping < now() - INTERVAL '15 seconds'
+  ) AND status != 'offline';
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.check_inactive_users() TO authenticated;
+
+-- Создаем запись активности при создании профиля
+CREATE OR REPLACE FUNCTION public.handle_new_profile()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  INSERT INTO user_activity (user_id, last_ping, is_online)
+  VALUES (NEW.id, now(), true);
+  RETURN NEW;
+END;
+$$;
+
+-- Триггер для создания записи активности
+DROP TRIGGER IF EXISTS on_profile_created ON profiles;
+CREATE TRIGGER on_profile_created
+  AFTER INSERT ON profiles
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_profile();  
