@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './index';
 import { messageService } from '@/shared/lib/supabase/Classes/messageService';
-import type { Message, Profile } from '@/types/types';
+import type { Message, Profile, MessageStatus } from '@/types/types';
 
 interface MessageState {
   chatMessages: Record<string, Array<Message & { sender: Profile }>>; // chatId -> messages
@@ -35,6 +35,24 @@ export const fetchLastMessage = createAsyncThunk(
   }
 );
 
+// Async thunk для отметки сообщений как прочитанных
+export const markMessagesAsRead = createAsyncThunk(
+  'message/markMessagesAsRead',
+  async ({ chatId, userId }: { chatId: string; userId: string }) => {
+    await messageService.markMessagesAsRead(chatId, userId);
+    return { chatId, userId };
+  }
+);
+
+// Async thunk для отметки конкретного сообщения как прочитанного
+export const markMessageAsRead = createAsyncThunk(
+  'message/markMessageAsRead',
+  async (messageId: string) => {
+    await messageService.markMessageAsRead(messageId);
+    return messageId;
+  }
+);
+
 const messageSlice = createSlice({
   name: 'message',
   initialState,
@@ -46,6 +64,30 @@ const messageSlice = createSlice({
     },
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
+    },
+    // Обновляем статус сообщения локально
+    updateMessageStatus(
+      state,
+      action: PayloadAction<{ messageId: string; status: MessageStatus }>
+    ) {
+      const { messageId, status } = action.payload;
+
+      // Обновляем в chatMessages
+      Object.keys(state.chatMessages).forEach((chatId) => {
+        const messages = state.chatMessages[chatId];
+        const messageIndex = messages.findIndex((m) => m.id === messageId);
+        if (messageIndex !== -1) {
+          messages[messageIndex].status = status;
+        }
+      });
+
+      // Обновляем в lastMessages
+      Object.keys(state.lastMessages).forEach((chatId) => {
+        const message = state.lastMessages[chatId];
+        if (message && message.id === messageId) {
+          message.status = status;
+        }
+      });
     },
   },
   extraReducers: (builder) => {
@@ -77,11 +119,51 @@ const messageSlice = createSlice({
       .addCase(fetchLastMessage.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Не удалось загрузить последнее сообщение';
+      })
+      // markMessagesAsRead
+      .addCase(markMessagesAsRead.fulfilled, (state, action) => {
+        const { chatId, userId } = action.payload;
+
+        // Обновляем статус всех непрочитанных сообщений в чате (кроме своих)
+        if (state.chatMessages[chatId]) {
+          state.chatMessages[chatId].forEach((message) => {
+            if (message.sender_id !== userId && message.status === 'unread') {
+              message.status = 'read';
+            }
+          });
+        }
+
+        // Обновляем последнее сообщение если нужно
+        const lastMessage = state.lastMessages[chatId];
+        if (lastMessage && lastMessage.sender_id !== userId && lastMessage.status === 'unread') {
+          lastMessage.status = 'read';
+        }
+      })
+      // markMessageAsRead
+      .addCase(markMessageAsRead.fulfilled, (state, action) => {
+        const messageId = action.payload;
+
+        // Обновляем статус конкретного сообщения
+        Object.keys(state.chatMessages).forEach((chatId) => {
+          const messages = state.chatMessages[chatId];
+          const messageIndex = messages.findIndex((m) => m.id === messageId);
+          if (messageIndex !== -1) {
+            messages[messageIndex].status = 'read';
+          }
+        });
+
+        // Обновляем в lastMessages если это последнее сообщение
+        Object.keys(state.lastMessages).forEach((chatId) => {
+          const message = state.lastMessages[chatId];
+          if (message && message.id === messageId) {
+            message.status = 'read';
+          }
+        });
       });
   },
 });
 
-export const { clearMessages, setError } = messageSlice.actions;
+export const { clearMessages, setError, updateMessageStatus } = messageSlice.actions;
 export default messageSlice.reducer;
 
 import { createSelector } from '@reduxjs/toolkit';

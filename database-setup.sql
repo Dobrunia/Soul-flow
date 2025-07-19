@@ -136,6 +136,14 @@ CREATE POLICY "Users can send messages to their chats" ON messages
     )
   );
 
+CREATE POLICY "Users can update messages in their chats" ON messages
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM chat_participants 
+      WHERE chat_id = messages.chat_id AND user_id = auth.uid()
+    )
+  );
+
 -- Политики безопасности для message_reactions
 CREATE POLICY "Users can view reactions in their chats" ON message_reactions
   FOR SELECT USING (
