@@ -30,6 +30,15 @@ export const fetchChat = createAsyncThunk('chat/fetchChat', async (chatId: strin
   return chatData;
 });
 
+// Async thunk для создания прямого чата
+export const createDirectChat = createAsyncThunk(
+  'chat/createDirectChat',
+  async ({ userId1, userId2 }: { userId1: string; userId2: string }) => {
+    const chat = await chatService.createDirectChat(userId1, userId2);
+    return chat;
+  }
+);
+
 const chatSlice = createSlice({
   name: 'chat',
   initialState,
@@ -40,6 +49,14 @@ const chatSlice = createSlice({
     },
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
+    },
+    // Добавляет новый чат в список (для realtime обновлений)
+    addChat(state, action: PayloadAction<Chat>) {
+      const newChat = action.payload;
+      // Проверяем, нет ли уже такого чата
+      if (!state.chats.find((chat) => chat.id === newChat.id)) {
+        state.chats.unshift(newChat); // Добавляем в начало списка
+      }
     },
   },
   extraReducers: (builder) => {
@@ -71,11 +88,30 @@ const chatSlice = createSlice({
       .addCase(fetchChat.rejected, (state, action) => {
         state.loading = false;
         state.error = action.error.message || 'Не удалось загрузить чат';
+      })
+      // createDirectChat
+      .addCase(createDirectChat.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createDirectChat.fulfilled, (state, action) => {
+        state.loading = false;
+        state.error = null;
+        const newChat = action.payload;
+        // Добавляем чат если его еще нет в списке
+        if (!state.chats.find((chat) => chat.id === newChat.id)) {
+          state.chats.unshift(newChat);
+        }
+        state.currentChat = newChat;
+      })
+      .addCase(createDirectChat.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Не удалось создать чат';
       });
   },
 });
 
-export const { clearChats, setError } = chatSlice.actions;
+export const { clearChats, setError, addChat } = chatSlice.actions;
 export default chatSlice.reducer;
 
 /* -------- селекторы -------- */

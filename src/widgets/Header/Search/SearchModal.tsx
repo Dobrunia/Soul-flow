@@ -1,11 +1,23 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Modal, Button, Avatar, Skeleton, DESIGN_TOKENS, Row, SearchInput } from 'dobruniaui';
-import { useSelector } from 'react-redux';
+import {
+  Modal,
+  Button,
+  Avatar,
+  Skeleton,
+  DESIGN_TOKENS,
+  Row,
+  SearchInput,
+  Alert,
+} from 'dobruniaui';
+import { useSelector, useDispatch } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
+import { createDirectChat } from '@/shared/store/chatSlice';
 import { userService } from '@/shared/lib/supabase/Classes/userService';
 import type { Profile } from '@/types/types';
+import type { AppDispatch } from '@/shared/store';
+import { useRouter } from 'next/navigation';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -13,10 +25,13 @@ interface SearchModalProps {
 }
 
 export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter();
   const me = useSelector(selectProfile);
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,15 +75,42 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     return () => clearTimeout(timeoutId);
   }, [searchQuery, me?.id]);
 
-  const handleUserSelect = (user: Profile) => {
-    // TODO: Создать чат с пользователем
-    console.log('Selected user:', user);
-    onClose();
+  const handleUserSelect = async (user: Profile) => {
+    if (!me?.id) return;
+
+    setCreating(true);
+    setError(null);
+
+    try {
+      console.log('🚀 Creating chat with user:', user.username);
+
+      // Создаем прямой чат
+      const result = await dispatch(
+        createDirectChat({
+          userId1: me.id,
+          userId2: user.id,
+        })
+      ).unwrap();
+
+      console.log('✅ Chat created/found:', result.id);
+
+      // Переходим к созданному чату
+      router.push(`/chats/${result.id}`);
+      onClose();
+    } catch (error) {
+      console.error('❌ Failed to create chat:', error);
+      setError('Не удалось создать чат');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title='Поиск пользователей' className='min-h-[380px]'>
       <div className='space-y-4'>
+        {/* Уведомления */}
+        {error && <Alert type='error'>{error}</Alert>}
+
         {/* Поисковая строка */}
         <SearchInput
           ref={searchInputRef}
@@ -140,8 +182,10 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     onClick={() => handleUserSelect(user)}
                     fullWidth
                     size='medium'
+                    disabled={creating}
+                    isLoading={creating}
                   >
-                    Начать чат
+                    {creating ? 'Создание...' : 'Начать чат'}
                   </Button>
                 }
                 className='p-2 rounded-md hover:bg-[var(--c-bg-elevated)] transition-colors'
@@ -150,12 +194,12 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           ) : searchQuery.trim() ? (
             // Нет результатов
             <div className='text-center text-[var(--c-text-secondary)] py-4'>
-              Пользователи не найдены
+              <Alert type='info'>Пользователи не найдены</Alert>
             </div>
           ) : (
             // Начальное состояние
             <div className='text-center text-[var(--c-text-secondary)] py-4'>
-              Введите имя пользователя для поиска
+              <Alert type='info'>Введите имя пользователя для поиска</Alert>
             </div>
           )}
         </div>

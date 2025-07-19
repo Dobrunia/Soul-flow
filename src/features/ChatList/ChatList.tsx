@@ -10,6 +10,8 @@ import {
   selectChatError,
   selectChatsLoaded,
   fetchChats,
+  fetchChat,
+  addChat,
 } from '@/shared/store/chatSlice';
 import {
   selectLastMessages,
@@ -132,10 +134,32 @@ export default function ChatList() {
       );
     });
 
+    // Подписываемся на создание новых чатов
+    statusService.subscribeToTable('chat_participants', 'INSERT', (payload) => {
+      console.log('📡 New chat participant:', payload);
+
+      // Если новый участник - это текущий пользователь, загружаем чат
+      if (payload.new.user_id === me?.id) {
+        const chatId = payload.new.chat_id;
+        console.log('🆕 Loading new chat:', chatId);
+
+        // Загружаем информацию о чате через сервис
+        dispatch(fetchChat(chatId))
+          .unwrap()
+          .then(() => {
+            // Также загружаем участников и последнее сообщение
+            dispatch(fetchChatParticipants(chatId));
+            dispatch(fetchLastMessage(chatId));
+          })
+          .catch(console.error);
+      }
+    });
+
     // Очистка подписки при размонтировании или изменении зависимостей
     return () => {
-      console.log('🔕 Unsubscribing from status changes');
+      console.log('🔕 Unsubscribing from realtime changes');
       statusService.unsubscribeFromChannel('profiles:UPDATE');
+      statusService.unsubscribeFromChannel('chat_participants:INSERT');
     };
   }, [me?.id, chats.length, dispatch]);
 
