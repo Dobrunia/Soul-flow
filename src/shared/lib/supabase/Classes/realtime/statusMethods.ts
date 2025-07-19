@@ -100,9 +100,14 @@ export class StatusMethods extends RealtimeCore {
   }
 
   /**
-   * Подписывается на изменения активности пользователей
+   * Подписывается на изменения last_ping в profiles
    */
   subscribeToActivityChanges(callback: (payload: any) => void): void {
-    this.subscribeToTable('user_activity', '*', callback);
+    this.subscribeToTable('profiles', 'UPDATE', (payload) => {
+      // Фильтруем только изменения last_ping
+      if (payload.new.last_ping !== payload.old.last_ping) {
+        callback(payload);
+      }
+    });
   }
 }
