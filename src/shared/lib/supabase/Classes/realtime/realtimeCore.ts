@@ -16,8 +16,11 @@ export class RealtimeCore extends SupabaseCore {
 
     // Если канал уже существует, возвращаем его
     if (this.channels.has(channelName)) {
+      console.log(`⚠️ Channel ${channelName} already exists, reusing`);
       return this.channels.get(channelName)!;
     }
+
+    console.log(`🔔 Creating new channel: ${channelName}`);
 
     const channel = this.supabase
       .channel(channelName)
@@ -42,8 +45,11 @@ export class RealtimeCore extends SupabaseCore {
   unsubscribeFromChannel(channelName: string): void {
     const channel = this.channels.get(channelName);
     if (channel) {
+      console.log(`🔕 Unsubscribing from channel: ${channelName}`);
       this.supabase.removeChannel(channel);
       this.channels.delete(channelName);
+    } else {
+      console.log(`⚠️ Channel ${channelName} not found for unsubscribe`);
     }
   }
 

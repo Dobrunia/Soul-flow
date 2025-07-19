@@ -11,6 +11,7 @@ export class MessageService extends SupabaseCore {
   ): Promise<Array<Message & { sender: Profile }>> {
     await this.ensureValidToken();
 
+    // Сначала получаем последние сообщения в обратном порядке
     const { data: messages, error } = await this.supabase
       .from('messages')
       .select(
@@ -25,7 +26,10 @@ export class MessageService extends SupabaseCore {
 
     if (error) throw error;
 
-    return (messages || []).map((m) => ({
+    // Разворачиваем массив для хронологического порядка (старые сверху, новые снизу)
+    const reversedMessages = (messages || []).reverse();
+
+    return reversedMessages.map((m) => ({
       id: m.id,
       chat_id: m.chat_id,
       sender_id: m.sender_id,

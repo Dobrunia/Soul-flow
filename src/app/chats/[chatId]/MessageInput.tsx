@@ -4,17 +4,16 @@ import { useState } from 'react';
 import { MessageInput as DobrunniaMessageInput } from 'dobruniaui';
 
 interface MessageInputProps {
-  onSendMessage: (message: string) => void;
   children?: React.ReactNode;
 }
 
-export default function MessageInput({ onSendMessage, children }: MessageInputProps) {
+export default function MessageInput({ children }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
 
   const handleSend = () => {
     if (message.trim() || files.length > 0) {
-      onSendMessage(message.trim());
+      // onSendMessage(message.trim());
       setMessage('');
       setFiles([]);
     }

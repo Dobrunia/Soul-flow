@@ -145,7 +145,7 @@ export default function ChatPage() {
         className='border-b border-[var(--c-border)]'
         centerJustify='left'
       />
-      <MessageInput onSendMessage={() => {}}>
+      <MessageInput>
         {chatMessages.map((m: any) => (
           <Message
             key={m.id}
@@ -161,7 +161,7 @@ export default function ChatPage() {
               name: m.sender?.username ?? 'Неизвестный',
               avatar: m.sender?.avatar_url ?? undefined,
             }}
-            isRead={m.sender_id === myId ? m.status : undefined}
+            isRead={m.sender_id === myId ? m.status === 'read' : undefined}
           />
         ))}
       </MessageInput>
