@@ -35,6 +35,19 @@ const participantSlice = createSlice({
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
     },
+    // Обновляет статус пользователя во всех чатах где он участвует
+    updateUserStatus(state, action: PayloadAction<{ userId: string; status: string }>) {
+      const { userId, status } = action.payload;
+
+      // Проходим по всем чатам и обновляем статус пользователя
+      Object.keys(state.participants).forEach((chatId) => {
+        const participants = state.participants[chatId];
+        const userIndex = participants.findIndex((p) => p.id === userId);
+        if (userIndex !== -1) {
+          participants[userIndex].status = status as any;
+        }
+      });
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -54,7 +67,7 @@ const participantSlice = createSlice({
   },
 });
 
-export const { clearParticipants, setError } = participantSlice.actions;
+export const { clearParticipants, setError, updateUserStatus } = participantSlice.actions;
 export default participantSlice.reducer;
 
 import { createSelector } from '@reduxjs/toolkit';

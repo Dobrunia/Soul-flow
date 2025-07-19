@@ -20,10 +20,12 @@ import {
   selectAllParticipants,
   selectChatParticipantsLoaded,
   fetchChatParticipants,
+  updateUserStatus,
 } from '@/shared/store/participantSlice';
 import { useRouter, usePathname } from 'next/navigation';
 import type { AppDispatch } from '@/shared/store';
 import type { ChatListItem } from 'dobruniaui';
+import { statusService } from '@/shared/lib/supabase/Classes/realtime';
 
 export default function ChatList() {
   const router = useRouter();
@@ -107,6 +109,35 @@ export default function ChatList() {
       }
     });
   }, [chats, lastMessages, allParticipants, dispatch]);
+
+  // Подписываемся на изменения статусов пользователей
+  useEffect(() => {
+    if (!me?.id || chats.length === 0) return;
+
+    console.log('🔔 Subscribing to status changes for chat participants');
+
+    statusService.subscribeToStatusChanges((payload) => {
+      console.log('📡 Status change received:', payload);
+
+      // Обновляем статус пользователя в сторе напрямую
+      const updatedUserId = payload.new.id;
+      const newStatus = payload.new.status;
+
+      // Диспатчим action для обновления статуса во всех чатах
+      dispatch(
+        updateUserStatus({
+          userId: updatedUserId,
+          status: newStatus,
+        })
+      );
+    });
+
+    // Очистка подписки при размонтировании или изменении зависимостей
+    return () => {
+      console.log('🔕 Unsubscribing from status changes');
+      statusService.unsubscribeFromChannel('profiles:UPDATE');
+    };
+  }, [me?.id, chats.length, dispatch]);
 
   const handleChatSelect = (chatId: string) => {
     router.push(`/chats/${chatId}`);
