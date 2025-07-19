@@ -10,7 +10,8 @@ import {
 } from '@/shared/store/profileSlice';
 import { auth } from '@/shared/lib/supabase/Classes/authService';
 import { useRouter } from 'next/navigation';
-import SettingsModal from './UserDropdown/Settings/SettingsModal';
+import SettingsModal from './Settings/SettingsModal';
+import SearchModal from './Search/SearchModal';
 import { useState } from 'react';
 
 export default function Header() {
@@ -20,6 +21,7 @@ export default function Header() {
   const status = useSelector(selectUserStatus);
   const router = useRouter();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -56,6 +58,12 @@ export default function Header() {
         {/* Кнопки действий */}
         <div className='flex items-center space-x-2'>
           <IconBtn
+            icon='add'
+            variant='ghost'
+            title='Найти пользователей'
+            onClick={() => setIsSearchOpen(true)}
+          />
+          <IconBtn
             icon='settings'
             variant='ghost'
             title='Настройки'
@@ -73,6 +81,9 @@ export default function Header() {
 
       {/* Модальное окно настроек */}
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
+      {/* Модальное окно поиска пользователей */}
+      <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </header>
   );
 }
