@@ -4,7 +4,7 @@ import { messageService } from '@/shared/lib/supabase/Classes/messageService';
 import type { Message, Profile, MessageStatus } from '@/types/types';
 
 interface MessageState {
-  chatMessages: Record<string, Array<Message & { sender: Profile }>>; // chatId -> messages
+  chatMessages: Record<string, Array<Message>>; // chatId -> messages (без sender)
   loading: boolean;
   error: string | null;
 }
@@ -45,10 +45,7 @@ const messageSlice = createSlice({
       state.error = action.payload;
     },
     // Добавляет новое сообщение в чат (для realtime обновлений)
-    addMessage(
-      state,
-      action: PayloadAction<{ chatId: string; message: Message & { sender: Profile } }>
-    ) {
+    addMessage(state, action: PayloadAction<{ chatId: string; message: Message }>) {
       const { chatId, message } = action.payload;
 
       if (!state.chatMessages[chatId]) {

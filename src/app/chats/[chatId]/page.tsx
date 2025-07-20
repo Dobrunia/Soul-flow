@@ -19,11 +19,8 @@ import {
   selectChatMessages,
   selectMessageLoading,
   selectMessageError,
-  addMessage,
 } from '@/shared/store/messageSlice';
 import type { AppDispatch, RootState } from '@/shared/store';
-import { store } from '@/shared/store';
-import { statusService } from '@/shared/lib/supabase/Classes/realtime';
 
 const isUUID = (s: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -67,7 +64,8 @@ export default function ChatPage() {
       dispatch(fetchChat(chatId));
     }
 
-    // Загружаем сообщения если их меньше или равно 1 тк в чате может быть последнее сообщение для chatList
+    // Загружаем сообщения если их меньше или равно 1 тк в чате может быть последнее сообщение для chatList + ws
+    // TODO: подумать над этим баг последнее сообщение + ws = жопа
     if (chatMessages.length <= 1) {
       dispatch(fetchChatMessages({ chatId, messageLimit: 50 }));
     }
@@ -86,61 +84,6 @@ export default function ChatPage() {
     participants.length,
     dispatch,
   ]);
-
-  // Подписка на новые сообщения в реальном времени
-  useEffect(() => {
-    if (!isValidChatId || !me?.id) return;
-
-    console.log('🔔 Subscribing to new messages for chat:', chatId);
-
-    statusService.subscribeToTable('messages', 'INSERT', (payload) => {
-      console.log('📨 New message received:', payload);
-
-      // Проверяем что сообщение для текущего чата
-      if (payload.new.chat_id === chatId) {
-        // Получаем актуальных участников из стора
-        const state = store.getState();
-        const currentParticipants = state.participant.participants[chatId] || [];
-
-        // Ищем отправителя среди участников чата
-        const sender = currentParticipants.find((p) => p.id === payload.new.sender_id) || {
-          id: payload.new.sender_id,
-          email: 'unknown@example.com',
-          username: 'Unknown',
-          avatar_url: null,
-          status: 'offline' as const,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        console.log('🔍 Sender found:', sender);
-        console.log('🔍 Participants found:', currentParticipants);
-
-        // Добавляем сообщение в стор
-        dispatch(
-          addMessage({
-            chatId,
-            message: {
-              id: payload.new.id,
-              chat_id: payload.new.chat_id,
-              sender_id: payload.new.sender_id,
-              content: payload.new.content,
-              message_type: payload.new.message_type,
-              status: payload.new.status,
-              created_at: payload.new.created_at,
-              updated_at: payload.new.updated_at,
-              sender,
-            },
-          })
-        );
-      }
-    });
-
-    return () => {
-      console.log('🔕 Unsubscribing from messages');
-      statusService.unsubscribeFromChannel('messages:INSERT');
-    };
-  }, [chatId, isValidChatId, me?.id, dispatch]);
 
   const loading = messageLoading || participantLoading;
   const error = messageError || participantError;
@@ -191,24 +134,29 @@ export default function ChatPage() {
         centerJustify='left'
       />
       <MessageInput>
-        {chatMessages.map((m: any) => (
-          <Message
-            key={m.id}
-            showActionsOnClick
-            type={m.sender_id === me.id ? 'outgoing' : 'incoming'}
-            text={m.content}
-            time={new Date(m.created_at).toLocaleTimeString('ru-RU', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-            sender={{
-              id: m.sender_id,
-              name: m.sender?.username ?? 'Неизвестный',
-              avatar: m.sender?.avatar_url ?? undefined,
-            }}
-            isRead={m.sender_id === me.id ? m.status === 'read' : undefined}
-          />
-        ))}
+        {chatMessages.map((m: any) => {
+          // Получаем отправителя из участников по sender_id
+          const sender = participants.find((p: Profile) => p.id === m.sender_id);
+
+          return (
+            <Message
+              key={m.id}
+              showActionsOnClick
+              type={m.sender_id === me.id ? 'outgoing' : 'incoming'}
+              text={m.content}
+              time={new Date(m.created_at).toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+              sender={{
+                id: m.sender_id,
+                name: sender?.username ?? 'Неизвестный',
+                avatar: sender?.avatar_url ?? undefined,
+              }}
+              isRead={m.sender_id === me.id ? m.status === 'read' : undefined}
+            />
+          );
+        })}
       </MessageInput>
     </div>
   );
