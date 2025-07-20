@@ -2,8 +2,9 @@
 
 import { useParams, notFound } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
-import { Message, Avatar, Row, LoadingSpinner, Button, Alert } from 'dobruniaui';
+import { Avatar, Row, LoadingSpinner, Button, Alert } from 'dobruniaui';
 import MessageInput from './MessageInput';
+import MessagesContainer from './MessagesContainer';
 import type { Profile } from '@/types/types';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectProfile, selectProfileLoading } from '@/shared/store/profileSlice';
@@ -133,31 +134,12 @@ export default function ChatPage() {
         className='border-b border-[var(--c-border)]'
         centerJustify='left'
       />
-      <MessageInput>
-        {chatMessages.map((m: any) => {
-          // Получаем отправителя из участников по sender_id
-          const sender = participants.find((p: Profile) => p.id === m.sender_id);
-
-          return (
-            <Message
-              key={m.id}
-              showActionsOnClick
-              type={m.sender_id === me.id ? 'outgoing' : 'incoming'}
-              text={m.content}
-              time={new Date(m.created_at).toLocaleTimeString('ru-RU', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-              sender={{
-                id: m.sender_id,
-                name: sender?.username ?? 'Неизвестный',
-                avatar: sender?.avatar_url ?? undefined,
-              }}
-              isRead={m.sender_id === me.id ? m.status === 'read' : undefined}
-            />
-          );
-        })}
-      </MessageInput>
+      <MessagesContainer
+        messages={chatMessages}
+        participants={participants}
+        currentUserId={me.id}
+      />
+      <MessageInput />
     </div>
   );
 }

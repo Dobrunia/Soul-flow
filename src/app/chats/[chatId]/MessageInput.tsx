@@ -7,11 +7,7 @@ import { MessageInput as DobrunniaMessageInput } from 'dobruniaui';
 import { selectProfile } from '@/shared/store/profileSlice';
 import { messageService } from '@/shared/lib/supabase/Classes/messageService';
 
-interface MessageInputProps {
-  children?: React.ReactNode;
-}
-
-export default function MessageInput({ children }: MessageInputProps) {
+export default function MessageInput() {
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
@@ -34,27 +30,26 @@ export default function MessageInput({ children }: MessageInputProps) {
     }
   };
 
+  const handleEmojiSelect = () => {
+    // TODO: Реализовать выбор эмодзи
+    console.log('Emoji selected');
+  };
+
   const handleAudioRecord = (audio: Blob) => {
     // TODO: Реализовать отправку аудио
     console.log('Audio recorded:', audio);
   };
 
   return (
-    <div className='flex-1 flex flex-col'>
-      <div className='flex-1 overflow-hidden'>
-        <DobrunniaMessageInput
-          value={message}
-          onChange={setMessage}
-          files={files}
-          onFilesChange={setFiles}
-          onSend={handleSend}
-          onAudioRecord={handleAudioRecord}
-          maxHeight={'100%'}
-          disabled={sending}
-        >
-          {children}
-        </DobrunniaMessageInput>
-      </div>
-    </div>
+    <DobrunniaMessageInput
+      value={message}
+      onChange={setMessage}
+      files={files}
+      onFilesChange={setFiles}
+      onSend={handleSend}
+      onEmojiSelect={handleEmojiSelect}
+      onAudioRecord={handleAudioRecord}
+      disabled={sending}
+    />
   );
 }
