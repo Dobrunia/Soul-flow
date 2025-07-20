@@ -64,8 +64,8 @@ export default function ChatPage() {
       dispatch(fetchChat(chatId));
     }
 
-    // Загружаем сообщения если их нет
-    if (!chatMessages.length) {
+    // Загружаем сообщения если их меньше или равно 1 тк в чате может быть последнее сообщение для chatList
+    if (chatMessages.length <= 1) {
       dispatch(fetchChatMessages({ chatId, messageLimit: 50 }));
     }
 
