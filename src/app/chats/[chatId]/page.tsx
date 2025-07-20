@@ -19,8 +19,11 @@ import {
   selectChatMessages,
   selectMessageLoading,
   selectMessageError,
+  addMessage,
 } from '@/shared/store/messageSlice';
 import type { AppDispatch, RootState } from '@/shared/store';
+import { store } from '@/shared/store';
+import { statusService } from '@/shared/lib/supabase/Classes/realtime';
 
 const isUUID = (s: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
@@ -83,6 +86,61 @@ export default function ChatPage() {
     participants.length,
     dispatch,
   ]);
+
+  // Подписка на новые сообщения в реальном времени
+  useEffect(() => {
+    if (!isValidChatId || !me?.id) return;
+
+    console.log('🔔 Subscribing to new messages for chat:', chatId);
+
+    statusService.subscribeToTable('messages', 'INSERT', (payload) => {
+      console.log('📨 New message received:', payload);
+
+      // Проверяем что сообщение для текущего чата
+      if (payload.new.chat_id === chatId) {
+        // Получаем актуальных участников из стора
+        const state = store.getState();
+        const currentParticipants = state.participant.participants[chatId] || [];
+
+        // Ищем отправителя среди участников чата
+        const sender = currentParticipants.find((p) => p.id === payload.new.sender_id) || {
+          id: payload.new.sender_id,
+          email: 'unknown@example.com',
+          username: 'Unknown',
+          avatar_url: null,
+          status: 'offline' as const,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        console.log('🔍 Sender found:', sender);
+        console.log('🔍 Participants found:', currentParticipants);
+
+        // Добавляем сообщение в стор
+        dispatch(
+          addMessage({
+            chatId,
+            message: {
+              id: payload.new.id,
+              chat_id: payload.new.chat_id,
+              sender_id: payload.new.sender_id,
+              content: payload.new.content,
+              message_type: payload.new.message_type,
+              status: payload.new.status,
+              created_at: payload.new.created_at,
+              updated_at: payload.new.updated_at,
+              sender,
+            },
+          })
+        );
+      }
+    });
+
+    return () => {
+      console.log('🔕 Unsubscribing from messages');
+      statusService.unsubscribeFromChannel('messages:INSERT');
+    };
+  }, [chatId, isValidChatId, me?.id, dispatch]);
 
   const loading = messageLoading || participantLoading;
   const error = messageError || participantError;

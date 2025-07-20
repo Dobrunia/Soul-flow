@@ -44,6 +44,23 @@ const messageSlice = createSlice({
     setError(state, action: PayloadAction<string | null>) {
       state.error = action.payload;
     },
+    // Добавляет новое сообщение в чат (для realtime обновлений)
+    addMessage(
+      state,
+      action: PayloadAction<{ chatId: string; message: Message & { sender: Profile } }>
+    ) {
+      const { chatId, message } = action.payload;
+
+      if (!state.chatMessages[chatId]) {
+        state.chatMessages[chatId] = [];
+      }
+
+      // Проверяем, нет ли уже такого сообщения
+      const existingMessageIndex = state.chatMessages[chatId].findIndex((m) => m.id === message.id);
+      if (existingMessageIndex === -1) {
+        state.chatMessages[chatId].push(message);
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -102,7 +119,7 @@ const messageSlice = createSlice({
   },
 });
 
-export const { clearMessages, setError } = messageSlice.actions;
+export const { clearMessages, setError, addMessage } = messageSlice.actions;
 export default messageSlice.reducer;
 
 import { createSelector } from '@reduxjs/toolkit';
