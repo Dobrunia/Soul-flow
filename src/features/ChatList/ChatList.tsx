@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { ChatList as DobrunniaChatList, LoadingSpinner, Alert } from 'dobruniaui';
+import { ChatList as DobrunniaChatList, LoadingSpinner, Alert, Button } from 'dobruniaui';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
 import {
@@ -11,17 +11,11 @@ import {
   selectChatsLoaded,
   fetchChats,
   fetchChat,
-  addChat,
 } from '@/shared/store/chatSlice';
+import { fetchLastMessage, selectChatMessages } from '@/shared/store/messageSlice';
 import {
-  selectLastMessages,
-  selectLastMessageLoaded,
-  fetchLastMessage,
-} from '@/shared/store/messageSlice';
-import {
-  selectAllParticipants,
-  selectChatParticipantsLoaded,
   fetchChatParticipants,
+  selectAllParticipants,
   updateUserStatus,
 } from '@/shared/store/participantSlice';
 import { useRouter, usePathname } from 'next/navigation';
@@ -38,46 +32,13 @@ export default function ChatList() {
   const loading = useSelector(selectChatLoading);
   const error = useSelector(selectChatError);
   const chatsLoaded = useSelector(selectChatsLoaded);
-  const lastMessages = useSelector(selectLastMessages);
+
+  // Получаем все данные сразу на верхнем уровне
+  const allChatMessages = useSelector(selectChatMessages);
   const allParticipants = useSelector(selectAllParticipants);
 
   // Получаем текущий chatId из URL
   const selectedId = pathname.startsWith('/chats/') ? pathname.split('/')[2] : null;
-
-  // Преобразуем сырые данные БД в UI формат
-  const chatItems: ChatListItem[] = useMemo(() => {
-    return chats.map((chat) => {
-      // Получаем данные для конкретного чата
-      const chatLastMessage = lastMessages[chat.id];
-      const chatParticipants = allParticipants[chat.id];
-
-      // Находим собеседника для direct чата
-      let companion = undefined;
-      if (chat.type === 'direct' && chatParticipants) {
-        companion = chatParticipants.find((p: any) => p.id !== me?.id);
-      }
-
-      return {
-        id: chat.id,
-        name: chat.type === 'direct' ? companion?.username || 'Direct Chat' : chat.name || 'Группа',
-        avatar: chat.type === 'direct' ? companion?.avatar_url || undefined : undefined,
-        lastMessage: chatLastMessage?.content || '',
-        time: chatLastMessage?.created_at
-          ? new Date(chatLastMessage.created_at).toLocaleTimeString('ru-RU', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          : '',
-        isOnline: chat.type === 'direct' ? companion?.status === 'online' : false,
-        messageStatus: chatLastMessage?.status === 'read' ? 'read' : 'unread', // приводим к типу ChatListItem
-        isOutgoing: chatLastMessage?.sender_id === me?.id, // true если сообщение от текущего пользователя
-        status:
-          chat.type === 'direct'
-            ? (companion?.status as 'online' | 'offline' | 'dnd' | 'invisible') || 'offline'
-            : 'offline', // статус пользователя
-      };
-    });
-  }, [chats, me?.id, lastMessages, allParticipants]);
 
   useEffect(() => {
     if (!me?.id) return;
@@ -88,29 +49,22 @@ export default function ChatList() {
     }
   }, [me?.id, chatsLoaded, dispatch]);
 
-  // Загружаем данные для каждого чата параллельно
+  // Автозагрузка недостающих данных для чатов
   useEffect(() => {
     if (chats.length === 0) return;
 
-    // Загружаем последние сообщения и участников только для тех чатов, которые еще не загружены
     chats.forEach((chat) => {
-      const lastMessageLoaded = selectLastMessageLoaded(
-        { message: { lastMessages } } as any,
-        chat.id
-      );
-      const participantsLoaded = selectChatParticipantsLoaded(
-        { participant: { participants: allParticipants } } as any,
-        chat.id
-      );
-
-      if (!lastMessageLoaded) {
+      // Если нет сообщений для чата - загружаем последнее
+      if (!allChatMessages[chat.id]) {
         dispatch(fetchLastMessage(chat.id));
       }
-      if (!participantsLoaded) {
+
+      // Если нет участников для чата - загружаем их
+      if (!allParticipants[chat.id]) {
         dispatch(fetchChatParticipants(chat.id));
       }
     });
-  }, [chats, lastMessages, allParticipants, dispatch]);
+  }, [chats, allChatMessages, allParticipants, dispatch]);
 
   // Подписываемся на изменения статусов пользователей
   useEffect(() => {
@@ -163,30 +117,54 @@ export default function ChatList() {
     };
   }, [me?.id, chats.length, dispatch]);
 
+  // Мемоизированное получение всех данных для чатов
+  const chatItems: ChatListItem[] = useMemo(() => {
+    return chats.map((chat) => {
+      // Получаем данные для конкретного чата из уже загруженных данных
+      const chatMessages = allChatMessages[chat.id];
+      const chatLastMessage =
+        chatMessages && chatMessages.length > 0 ? chatMessages[chatMessages.length - 1] : null;
+      const chatParticipants = allParticipants[chat.id];
+
+      // Находим собеседника для direct чата
+      let companion = undefined;
+      if (chat.type === 'direct' && chatParticipants) {
+        companion = chatParticipants.find((p: any) => p.id !== me?.id);
+      }
+
+      return {
+        id: chat.id,
+        name: chat.type === 'direct' ? companion?.username || 'Direct Chat' : chat.name || 'Группа',
+        avatar: chat.type === 'direct' ? companion?.avatar_url || undefined : undefined,
+        lastMessage: chatLastMessage?.content || '',
+        time: chatLastMessage?.created_at
+          ? new Date(chatLastMessage.created_at).toLocaleTimeString('ru-RU', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : '',
+        isOnline: chat.type === 'direct' ? companion?.status === 'online' : false,
+        messageStatus: chatLastMessage?.status === 'read' ? 'read' : 'unread',
+        isOutgoing: chatLastMessage?.sender_id === me?.id,
+        status:
+          chat.type === 'direct'
+            ? (companion?.status as 'online' | 'offline' | 'dnd' | 'invisible') || 'offline'
+            : 'offline',
+      };
+    });
+  }, [chats, allChatMessages, allParticipants, me?.id]);
+
   const handleChatSelect = (chatId: string) => {
     router.push(`/chats/${chatId}`);
   };
 
-  if (loading) {
-    return (
-      <div className='flex-1 flex items-center justify-center p-4'>
-        <LoadingSpinner size='large' />
-      </div>
-    );
-  }
-
   if (error) {
     return (
-      <div className='flex-1 flex items-center justify-center p-4'>
-        <Alert type='error' className='text-center'>
-          <p className='mb-2'>{error}</p>
-          <button
-            onClick={() => dispatch(fetchChats(me?.id || ''))}
-            className='text-blue-500 hover:underline'
-          >
-            Попробовать снова
-          </button>
-        </Alert>
+      <div className='md:w-80 w-full flex flex-col bg-[var(--c-bg-subtle)] items-center'>
+        <Alert type='error'>{error}</Alert>
+        <Button onClick={() => dispatch(fetchChats(me?.id || ''))} className='mt-4'>
+          Попробовать снова
+        </Button>
       </div>
     );
   }

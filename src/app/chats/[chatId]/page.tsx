@@ -7,7 +7,7 @@ import MessageInput from './MessageInput';
 import type { Profile } from '@/types/types';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectProfile, selectProfileLoading } from '@/shared/store/profileSlice';
-import { fetchChatMessages, markMessagesAsRead } from '@/shared/store/messageSlice';
+import { fetchChatMessages } from '@/shared/store/messageSlice';
 import { fetchChatParticipants } from '@/shared/store/participantSlice';
 import { fetchChat, selectChats } from '@/shared/store/chatSlice';
 import {
@@ -83,19 +83,6 @@ export default function ChatPage() {
     participantsLoaded,
   ]);
 
-  // Отмечаем сообщения как прочитанные при загрузке чата
-  useEffect(() => {
-    if (chatId && myId && messagesLoaded && chatMessages.length > 0) {
-      // Проверяем, есть ли непрочитанные сообщения от других пользователей
-      const hasUnreadMessages = chatMessages.some(
-        (message) => message.sender_id !== myId && message.status === 'unread'
-      );
-
-      if (hasUnreadMessages) {
-        dispatch(markMessagesAsRead({ chatId, userId: myId }));
-      }
-    }
-  }, [chatId, myId, messagesLoaded, chatMessages, dispatch]);
 
   // Вычисляем companion из Redux данных
   const companion = participants?.find((p: Profile) => p.id !== myId) ?? null;
