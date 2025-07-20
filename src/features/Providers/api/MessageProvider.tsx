@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectProfile } from '@/shared/store/profileSlice';
-import { addMessage } from '@/shared/store/messageSlice';
+import { addMessage, updateMessageStatus } from '@/shared/store/messageSlice';
 import { statusService } from '@/shared/lib/supabase/Classes/realtime';
 import type { AppDispatch } from '@/shared/store';
 
@@ -21,6 +21,7 @@ export default function MessageProvider({ children }: { children: React.ReactNod
 
       const chatId = payload.new.chat_id;
 
+      console.log('🚀 Dispatching addMessage to store');
       // Добавляем сообщение в стор для любого чата
       dispatch(
         addMessage({
@@ -39,9 +40,22 @@ export default function MessageProvider({ children }: { children: React.ReactNod
       );
     });
 
+    // Подписываемся на изменения статуса сообщений (когда помечают как прочитанные)
+    statusService.subscribeToTable('messages', 'UPDATE', (payload) => {
+      console.log('📝 Message status updated:', payload);
+
+      // Обновляем статус сообщения в сторе
+      dispatch(updateMessageStatus({
+        messageId: payload.new.id,
+        status: payload.new.status,
+      }));
+      console.log('Message status changed from', payload.old.status, 'to', payload.new.status);
+    });
+
     return () => {
       console.log('🔕 Stopping global message subscription');
       statusService.unsubscribeFromChannel('messages:INSERT');
+      statusService.unsubscribeFromChannel('messages:UPDATE');
     };
   }, [me?.id, dispatch]);
 

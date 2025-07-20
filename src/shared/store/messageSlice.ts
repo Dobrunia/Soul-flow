@@ -58,6 +58,21 @@ const messageSlice = createSlice({
         state.chatMessages[chatId].push(message);
       }
     },
+    // Обновляет статус конкретного сообщения (для realtime обновлений статуса)
+    updateMessageStatus(
+      state,
+      action: PayloadAction<{ messageId: string; status: MessageStatus }>
+    ) {
+      const { messageId, status } = action.payload;
+
+      // Ищем сообщение во всех чатах и обновляем его статус
+      Object.keys(state.chatMessages).forEach((chatId) => {
+        const messageIndex = state.chatMessages[chatId].findIndex((m) => m.id === messageId);
+        if (messageIndex !== -1) {
+          state.chatMessages[chatId][messageIndex].status = status;
+        }
+      });
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -116,7 +131,7 @@ const messageSlice = createSlice({
   },
 });
 
-export const { clearMessages, setError, addMessage } = messageSlice.actions;
+export const { clearMessages, setError, addMessage, updateMessageStatus } = messageSlice.actions;
 export default messageSlice.reducer;
 
 import { createSelector } from '@reduxjs/toolkit';

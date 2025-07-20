@@ -61,6 +61,21 @@ export class MessageService extends SupabaseCore {
     if (error) throw error;
     return message;
   }
+
+  /**
+   * Отметить сообщение как прочитанное (когда отображается в чате)
+   */
+  async markMessageAsRead(messageId: string): Promise<void> {
+    await this.ensureValidToken();
+
+    const { error } = await this.supabase
+      .from('messages')
+      .update({ status: 'read' })
+      .eq('id', messageId)
+      .eq('status', 'unread'); // Обновляем только если сообщение было unread
+
+    if (error) throw error;
+  }
 }
 
 export const messageService = new MessageService();

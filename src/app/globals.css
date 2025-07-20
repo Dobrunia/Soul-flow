@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Custom scrollbar for messages container */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    background: var(--c-bg-default);
+    border-radius: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--c-accent);
+    border-radius: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--c-accent-hover);
+}
+
 /* Font sizes utility classes */
 .font-small {
     font-size: 0.7rem;
