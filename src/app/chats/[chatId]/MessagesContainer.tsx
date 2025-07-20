@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { Message } from 'dobruniaui';
 import type { Profile, Message as MessageType } from '@/types/types';
 import { messageService } from '@/shared/lib/supabase/Classes/messageService';
@@ -16,6 +16,8 @@ export default function MessagesContainer({
   participants,
   currentUserId,
 }: MessagesContainerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // Мемоизируем отдельно участников чтобы избежать лишних пересчетов
   const participantsMap = useMemo(() => {
     const map = new Map<string, Profile>();
@@ -35,9 +37,16 @@ export default function MessagesContainer({
     });
   }, [messages, currentUserId]);
 
+  // Автоскролл вниз при новых сообщениях
+  useEffect(() => {
+    if (containerRef.current && messages.length > 0) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [messages.length]);
+
   if (messages.length === 0) {
     return (
-      <div className='flex-1 overflow-y-auto space-y-2 custom-scrollbar'>
+      <div ref={containerRef} className='flex-1 overflow-y-auto space-y-2 custom-scrollbar'>
         <div className='flex items-center justify-center h-full text-[var(--c-text-secondary)]'>
           Сообщений пока нет
         </div>
@@ -47,7 +56,7 @@ export default function MessagesContainer({
 
   console.log('render messages');
   return (
-    <div className='flex-1 overflow-y-auto custom-scrollbar'>
+    <div ref={containerRef} className='flex-1 overflow-y-auto custom-scrollbar'>
       {messages.map((message) => {
         // Получаем отправителя из Map по sender_id
         const sender = participantsMap.get(message.sender_id);
