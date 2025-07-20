@@ -76,6 +76,48 @@ export class MessageService extends SupabaseCore {
       sender: message.sender,
     };
   }
+
+  /**
+   * Отправить новое сообщение
+   */
+  async sendMessage(
+    chatId: string,
+    senderId: string,
+    content: string
+  ): Promise<Message & { sender: Profile }> {
+    await this.ensureValidToken();
+
+    const { data: message, error } = await this.supabase
+      .from('messages')
+      .insert({
+        chat_id: chatId,
+        sender_id: senderId,
+        content: content.trim(),
+        message_type: 'text',
+        status: 'unread',
+      })
+      .select(
+        `
+        *,
+        sender:sender_id(id, username, avatar_url, status)
+      `
+      )
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: message.id,
+      chat_id: message.chat_id,
+      sender_id: message.sender_id,
+      content: message.content,
+      message_type: message.message_type,
+      status: message.status,
+      created_at: message.created_at,
+      updated_at: message.updated_at,
+      sender: message.sender,
+    };
+  }
 }
 
 export const messageService = new MessageService();
