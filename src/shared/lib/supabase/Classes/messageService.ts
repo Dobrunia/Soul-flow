@@ -76,67 +76,6 @@ export class MessageService extends SupabaseCore {
       sender: message.sender,
     };
   }
-
-  /**
-   * Отметить сообщения как прочитанные
-   */
-  async markMessagesAsRead(chatId: string, userId: string): Promise<void> {
-    await this.ensureValidToken();
-
-    // Проверяем права доступа к чату
-    const { data: chatAccess, error: accessError } = await this.supabase
-      .from('chat_participants')
-      .select('id')
-      .eq('chat_id', chatId)
-      .eq('user_id', userId)
-      .single();
-
-    if (accessError) {
-      console.error('❌ Access check failed:', accessError);
-      throw accessError;
-    }
-
-    // Сначала получаем количество непрочитанных сообщений для логирования
-    const { data: unreadCount, error: countError } = await this.supabase
-      .from('messages')
-      .select('id', { count: 'exact' })
-      .eq('chat_id', chatId)
-      .neq('sender_id', userId)
-      .eq('status', 'unread');
-
-    if (countError) {
-      console.error('❌ Error counting unread messages:', countError);
-      throw countError;
-    }
-
-    const { data: updateResult, error } = await this.supabase
-      .from('messages')
-      .update({ status: 'read' })
-      .eq('chat_id', chatId)
-      .neq('sender_id', userId) // Не обновляем свои сообщения
-      .eq('status', 'unread') // Только непрочитанные
-      .select('id, status'); // Возвращаем обновленные записи
-
-    if (error) {
-      console.error('❌ Error marking messages as read:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Отметить конкретное сообщение как прочитанное
-   */
-  async markMessageAsRead(messageId: string): Promise<void> {
-    await this.ensureValidToken();
-
-    const { error } = await this.supabase
-      .from('messages')
-      .update({ status: 'read' })
-      .eq('id', messageId)
-      .eq('status', 'unread');
-
-    if (error) throw error;
-  }
 }
 
 export const messageService = new MessageService();
