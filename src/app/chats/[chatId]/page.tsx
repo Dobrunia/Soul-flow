@@ -1,27 +1,25 @@
 'use client';
 
 import { useParams, notFound } from 'next/navigation';
-import { useEffect } from 'react';
-import { Message, Avatar, Row, LoadingSpinner } from 'dobruniaui';
+import { useEffect, useMemo } from 'react';
+import { Message, Avatar, Row, LoadingSpinner, Button, Alert } from 'dobruniaui';
 import MessageInput from './MessageInput';
 import type { Profile } from '@/types/types';
 import { useSelector, useDispatch } from 'react-redux';
 import { selectProfile, selectProfileLoading } from '@/shared/store/profileSlice';
-import { fetchChatMessages } from '@/shared/store/messageSlice';
-import { fetchChatParticipants } from '@/shared/store/participantSlice';
-import { fetchChat, selectChats } from '@/shared/store/chatSlice';
 import {
+  fetchChatParticipants,
+  selectAllParticipants,
+  selectParticipantLoading,
+  selectParticipantError,
+} from '@/shared/store/participantSlice';
+import { fetchChat, selectCurrentChat, selectChatLoaded } from '@/shared/store/chatSlice';
+import {
+  fetchChatMessages,
   selectChatMessages,
   selectMessageLoading,
   selectMessageError,
-  selectChatMessagesLoaded,
 } from '@/shared/store/messageSlice';
-import {
-  selectParticipants,
-  selectParticipantLoading,
-  selectParticipantError,
-  selectChatParticipantsLoaded,
-} from '@/shared/store/participantSlice';
 import type { AppDispatch, RootState } from '@/shared/store';
 
 const isUUID = (s: string) =>
@@ -29,88 +27,90 @@ const isUUID = (s: string) =>
 
 export default function ChatPage() {
   const { chatId: rawChatId } = useParams() as { chatId?: string };
-  const me = useSelector(selectProfile);
-  const profileLoading = useSelector(selectProfileLoading);
   const dispatch = useDispatch<AppDispatch>();
 
   // Проверяем валидность chatId
   const isValidChatId = rawChatId && isUUID(rawChatId);
   const chatId = isValidChatId ? rawChatId : '';
-  const myId = me?.id;
 
-  // Redux selectors (после определения chatId)
-  const chatMessages = useSelector(
-    (state: RootState) => selectChatMessages(state)[chatId] || [],
-    (prev, next) => {
-      // Мемоизируем результат, сравнивая массивы по содержимому
-      if (prev.length !== next.length) return false;
-      return prev.every((msg, index) => msg.id === next[index]?.id);
-    }
-  );
+  // Получаем все данные на верхнем уровне
+  const me = useSelector(selectProfile);
+  const profileLoading = useSelector(selectProfileLoading);
+  const currentChat = useSelector(selectCurrentChat);
+  const chatLoaded = useSelector((state: RootState) => selectChatLoaded(state, chatId));
+  const allChatMessages = useSelector(selectChatMessages);
+  const allParticipants = useSelector(selectAllParticipants);
   const messageLoading = useSelector(selectMessageLoading);
   const messageError = useSelector(selectMessageError);
-  const messagesLoaded = useSelector((state: RootState) => selectChatMessagesLoaded(state, chatId));
-  const participants = useSelector((state: RootState) => selectParticipants(state, chatId));
   const participantLoading = useSelector(selectParticipantLoading);
   const participantError = useSelector(selectParticipantError);
-  const participantsLoaded = useSelector((state: RootState) =>
-    selectChatParticipantsLoaded(state, chatId)
+
+  // Получаем данные для конкретного чата
+  const chatMessages = useMemo(() => allChatMessages[chatId] || [], [allChatMessages, chatId]);
+
+  const participants = useMemo(() => allParticipants[chatId] || [], [allParticipants, chatId]);
+
+  const companion = useMemo(
+    () => participants.find((p: Profile) => p.id !== me?.id) || null,
+    [participants, me?.id]
   );
-  const allChats = useSelector(selectChats);
-  const currentChat = allChats.find((chat) => chat.id === chatId);
 
+  // Автозагрузка недостающих данных
   useEffect(() => {
-    if (profileLoading || !isValidChatId || !myId) return;
+    if (!isValidChatId || !me?.id || profileLoading) return;
 
-    // Загружаем данные через Redux только если они еще не загружены
-    if (!currentChat) {
+    // Загружаем чат если его нет
+    if (!chatLoaded) {
       dispatch(fetchChat(chatId));
     }
-    if (!messagesLoaded) {
-      dispatch(fetchChatMessages({ chatId, messageLimit: 10 }));
+
+    // Загружаем сообщения если их нет
+    if (!chatMessages.length) {
+      dispatch(fetchChatMessages({ chatId, messageLimit: 50 }));
     }
-    if (!participantsLoaded) {
+
+    // Загружаем участников если их нет
+    if (!participants.length) {
       dispatch(fetchChatParticipants(chatId));
     }
   }, [
     chatId,
-    dispatch,
-    profileLoading,
     isValidChatId,
-    myId,
-    currentChat,
-    messagesLoaded,
-    participantsLoaded,
+    me?.id,
+    profileLoading,
+    chatLoaded,
+    chatMessages.length,
+    participants.length,
+    dispatch,
   ]);
-
-
-  // Вычисляем companion из Redux данных
-  const companion = participants?.find((p: Profile) => p.id !== myId) ?? null;
 
   const loading = messageLoading || participantLoading;
   const error = messageError || participantError;
 
-  // Ранний возврат после всех хуков
+  // Ранние возвраты
   if (!isValidChatId) notFound();
-  if (!myId) return null; // профайл ещё не поднят
+  if (!me?.id) return null;
 
-  if (loading && !error)
+  if (loading && !error) {
     return (
       <div className='flex-1 flex items-center justify-center'>
         <LoadingSpinner size='large' />
       </div>
     );
-  if (error)
+  }
+
+  if (error) {
     return (
       <div className='flex-1 flex items-center justify-center'>
         <div className='text-center'>
-          <p>{error}</p>
-          <button onClick={() => window.location.reload()} className='text-blue-500'>
+          <Alert type='error'>{error}</Alert>
+          <Button onClick={() => window.location.reload()} className='mt-4'>
             Попробовать снова
-          </button>
+          </Button>
         </div>
       </div>
     );
+  }
 
   return (
     <div className='flex flex-col h-full'>
@@ -137,7 +137,7 @@ export default function ChatPage() {
           <Message
             key={m.id}
             showActionsOnClick
-            type={m.sender_id === myId ? 'outgoing' : 'incoming'}
+            type={m.sender_id === me.id ? 'outgoing' : 'incoming'}
             text={m.content}
             time={new Date(m.created_at).toLocaleTimeString('ru-RU', {
               hour: '2-digit',
@@ -148,7 +148,7 @@ export default function ChatPage() {
               name: m.sender?.username ?? 'Неизвестный',
               avatar: m.sender?.avatar_url ?? undefined,
             }}
-            isRead={m.sender_id === myId ? m.status === 'read' : undefined}
+            isRead={m.sender_id === me.id ? m.status === 'read' : undefined}
           />
         ))}
       </MessageInput>
