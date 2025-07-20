@@ -6,14 +6,12 @@ import { createSelector } from '@reduxjs/toolkit';
 
 interface ChatState {
   chats: Chat[];
-  currentChat: Chat | null;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: ChatState = {
   chats: [],
-  currentChat: null,
   loading: false,
   error: null,
 };
@@ -83,7 +81,6 @@ const chatSlice = createSlice({
       .addCase(fetchChat.fulfilled, (state, action) => {
         state.loading = false;
         state.error = null;
-        state.currentChat = action.payload;
       })
       .addCase(fetchChat.rejected, (state, action) => {
         state.loading = false;
@@ -102,7 +99,6 @@ const chatSlice = createSlice({
         if (!state.chats.find((chat) => chat.id === newChat.id)) {
           state.chats.unshift(newChat);
         }
-        state.currentChat = newChat;
       })
       .addCase(createDirectChat.rejected, (state, action) => {
         state.loading = false;
@@ -116,9 +112,14 @@ export default chatSlice.reducer;
 
 /* -------- селекторы -------- */
 export const selectChats = (state: RootState) => state.chat.chats;
-export const selectCurrentChat = (state: RootState) => state.chat.currentChat;
 export const selectChatLoading = (state: RootState) => state.chat.loading;
 export const selectChatError = (state: RootState) => state.chat.error;
+
+// Селектор для получения чата по ID
+export const selectChatById = createSelector(
+  [selectChats, (state: RootState, chatId: string) => chatId],
+  (chats, chatId) => chats.find((chat) => chat.id === chatId) || null
+);
 
 // Селектор для проверки загруженности чатов
 export const selectChatsLoaded = createSelector(

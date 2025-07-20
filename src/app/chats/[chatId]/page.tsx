@@ -13,7 +13,7 @@ import {
   selectParticipantLoading,
   selectParticipantError,
 } from '@/shared/store/participantSlice';
-import { fetchChat, selectCurrentChat, selectChatLoaded } from '@/shared/store/chatSlice';
+import { fetchChat, selectChatById, selectChatLoaded } from '@/shared/store/chatSlice';
 import {
   fetchChatMessages,
   selectChatMessages,
@@ -36,7 +36,7 @@ export default function ChatPage() {
   // Получаем все данные на верхнем уровне
   const me = useSelector(selectProfile);
   const profileLoading = useSelector(selectProfileLoading);
-  const currentChat = useSelector(selectCurrentChat);
+  const currentChat = useSelector((state: RootState) => selectChatById(state, chatId));
   const chatLoaded = useSelector((state: RootState) => selectChatLoaded(state, chatId));
   const allChatMessages = useSelector(selectChatMessages);
   const allParticipants = useSelector(selectAllParticipants);
