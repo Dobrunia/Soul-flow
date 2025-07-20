@@ -49,7 +49,7 @@ export default function MessageInput({ children }: MessageInputProps) {
           onFilesChange={setFiles}
           onSend={handleSend}
           onAudioRecord={handleAudioRecord}
-          maxHeight={400}
+          maxHeight={'100%'}
           disabled={sending}
         >
           {children}
